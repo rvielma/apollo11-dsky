@@ -288,8 +288,10 @@ footer a { color: var(--ink-2); }
           <button class="run" id="btnPause" type="button">Pausar</button>
           <button class="run" id="btnReset" type="button">Reiniciar AGC</button>
           <button class="run" id="btnFast" type="button">Acelerar ×10</button>
-          <button class="run" id="btnSound" type="button" aria-pressed="false">Sonido: no</button>
+          <button class="run" id="btnSound" type="button" aria-pressed="false">Activar sonido</button>
+          <button class="run" id="btnVoice" type="button" disabled>Probar voz</button>
         </div>
+        <p class="kbd" id="sndStatus" aria-live="polite">Sonido apagado. Actívalo para oír la cabina y las voces de la misión.</p>
       </div>
 
       <div class="panel">
@@ -1246,14 +1248,31 @@ const ESCENARIO = {"fuente": "NASSP, escenario 'Apollo 11 - 10 - PDI T-15m' (GPL
   const snd = (() => {
     let ctx = null, on = false, master, noiseBuf, engine, engineGain, lastJets = 0, jetPrev = new Set();
     const clips = {}, played = new Set();
+    const fallback = {}, errors = {};
+    let ready = 0;
     function loadClips() {
       for (const name of CLIPS) {
         fetch("audio/" + name + ".mp3")
-          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status))))
-          .then((buf) => ctx.decodeAudioData(buf))
-          .then((audio) => { clips[name] = audio; })
-          .catch(() => {});        // si un clip no está, se sigue sin él
+          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error("HTTP " + r.status))))
+          .then((buf) => new Promise((ok, fail) => ctx.decodeAudioData(buf, ok, fail)))
+          .then((audio) => { clips[name] = audio; ready++; })
+          .catch((e) => {
+            // Plan B: que el navegador lo reproduzca con <audio>
+            errors[name] = (e && (e.message || e.name)) || "error";
+            fallback[name] = new Audio("audio/" + name + ".mp3");
+            fallback[name].preload = "auto";
+            ready++;
+          })
+          .finally(status);
       }
+    }
+    function status() {
+      const bad = Object.keys(errors);
+      $("sndStatus").textContent = !on ? "Sonido apagado. Actívalo para oír la cabina y las voces de la misión."
+        : ready < CLIPS.length ? `Sonido activado. Cargando voces de la misión… (${ready} de ${CLIPS.length})`
+        : bad.length ? `Sonido activado. ${CLIPS.length - bad.length} voces por Web Audio; ${bad.join(", ")} por el reproductor del navegador (${errors[bad[0]]}).`
+        : `Sonido activado. ${CLIPS.length} voces de la misión listas: suenan en el PDI, la 1202, el contacto y el aterrizaje.`;
+      $("btnVoice").disabled = !on || ready === 0;
     }
     function init() {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1286,8 +1305,16 @@ const ESCENARIO = {"fuente": "NASSP, escenario 'Apollo 11 - 10 - PDI T-15m' (GPL
       g.gain.setValueAtTime(gain, t0 + dur - 0.02); g.gain.linearRampToValueAtTime(0, t0 + dur);
       o.connect(g).connect(master); o.start(t0); o.stop(t0 + dur + 0.02);
     }
-    function clip(name) {
-      if (!on || played.has(name) || !clips[name]) return null;
+    function clip(name, force = false) {
+      if (!on || (played.has(name) && !force)) return null;
+      if (!clips[name]) {
+        const a = fallback[name];
+        if (!a) return null;
+        played.add(name);
+        a.currentTime = 0;
+        a.play().catch((e) => { $("sndStatus").textContent = `No se pudo reproducir ${name}: ${e.name}. Prueba pulsar "Probar voz".`; });
+        return a;
+      }
       played.add(name);
       const src = ctx.createBufferSource(), g = ctx.createGain();
       src.buffer = clips[name]; g.gain.value = 1.3;
@@ -1300,6 +1327,7 @@ const ESCENARIO = {"fuente": "NASSP, escenario 'Apollo 11 - 10 - PDI T-15m' (GPL
         on = !on;
         if (on && !ctx) init();
         if (ctx) (on ? ctx.resume() : ctx.suspend());
+        status();
         return on;
       },
       get on() { return on; },
@@ -1322,28 +1350,13 @@ const ESCENARIO = {"fuente": "NASSP, escenario 'Apollo 11 - 10 - PDI T-15m' (GPL
       },
     };
   })();
-  function soundButton(on) {
-    const b = $("btnSound");
-    b.textContent = on ? "Sonido: sí" : "Sonido: no";
-    b.setAttribute("aria-pressed", on);
-  }
-  $("btnSound").addEventListener("click", () => {
+  $("btnSound").addEventListener("click", (e) => {
     const on = snd.toggle();
-    soundButton(on);
-    try { localStorage.setItem("apollo11-sonido", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
+    e.currentTarget.textContent = on ? "Silenciar" : "Activar sonido";
+    e.currentTarget.setAttribute("aria-pressed", on);
   });
-  // Si el sonido quedó activado en una visita anterior, se reactiva con el primer gesto
-  // (el navegador no permite empezar a sonar sin uno).
-  try {
-    if (localStorage.getItem("apollo11-sonido") === "1") {
-      const arm = (e) => {
-        if (e.target.closest && e.target.closest("#btnSound")) return;   // ese clic ya lo maneja el botón
-        if (!snd.on) soundButton(snd.toggle());
-      };
-      document.addEventListener("pointerdown", arm, { once: true, capture: true });
-      document.addEventListener("keydown", arm, { once: true, capture: true });
-    }
-  } catch (e) { /* sin almacenamiento */ }
+  // Reproduce una voz al instante, para comprobar el audio sin esperar al descenso
+  $("btnVoice").addEventListener("click", () => snd.clip("eagle-landed", true));
   // Al terminar un clip, el que le respondía en la misión
   const then = (a, name) => { if (a) a.addEventListener("ended", () => snd.clip(name), { once: true }); };
   function onAlarm(code) {
