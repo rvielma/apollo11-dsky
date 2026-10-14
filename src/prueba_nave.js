@@ -46,7 +46,7 @@ async function lm() {
 
 const ESCENARIO = JSON.parse(html.slice(html.indexOf("const ESCENARIO = ") + 18, html.indexOf(";\n", html.indexOf("const ESCENARIO = "))));
 
-async function descent() {
+async function descent(rrNoise = 0) {
   const wasi = new Proxy({}, { get: () => () => 8 });
   const { instance } = await WebAssembly.instantiate(WASM, { wasi_snapshot_preview1: wasi });
   const agc = instance.exports;
@@ -60,6 +60,7 @@ async function descent() {
   sim.reset();
   sim.initFromMemory();
   sim.setMode("auto");
+  agc.agc_rr_noise(rrNoise);
   let t = 0;
   const run = (sec) => { for (let c = 0; c < sec * AGC_HZ; c += SLICE) { agc.agc_run(SLICE); sim.step(SLICE / AGC_HZ); t += SLICE / AGC_HZ; } };
   const keys = (s) => { for (const c of s) { if (c === "P") { agc.agc_pro(1); run(0.5); agc.agc_pro(0); run(0.6); } else { agc.agc_key(KEY[c]); run(0.25); } } };
@@ -156,6 +157,16 @@ const deg = (v) => v.map((x) => (x / DEG).toFixed(2)).join(" / ");
     }
     h.keys("V05N09E");
     check("descenso: sin alarmas", h.dsky().r1 === "00000", `R1 de V05 N09 = ${h.dsky().r1}`);
+  }
+  {
+    // Con el radar de encuentro robando ciclos como en el Apollo 11: alarmas 1201/1202 por
+    // sobrecarga del ejecutivo, reinicios por software y aun así un aterrizaje suave.
+    const h = await descent(6400);
+    const td = h.sim.touchdown;
+    check("1202: aun así se posa suave", h.sim.landed && !td.crash, td ? `vertical ${td.vVert.toFixed(2)} m/s` : "no se posó");
+    h.keys("V05N09E");
+    const codes = [h.dsky().r1];
+    check("1202: el AGC registró 1201 o 1202", codes.some((c) => c === "01201" || c === "01202"), `R1 de V05 N09 = ${codes[0]}`);
   }
   console.log(fallas ? `\n${fallas} prueba(s) fallaron` : "\ntodo bien");
   process.exit(fallas ? 1 : 0);

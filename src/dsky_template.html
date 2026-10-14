@@ -200,6 +200,10 @@ footer a { color: var(--ink-2); }
 .jets text { font-family: var(--f-label); font-size: 10px; letter-spacing: .08em; fill: var(--ink-3); }
 .jets .fwd { fill: var(--ink-2); }
 
+.window-box { margin: 0; display: grid; gap: 6px; }
+.window-box figcaption { font-family: var(--f-label); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.lmwin { position: relative; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #000; border: 1px solid var(--rule); }
+.lmwin canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .descent { display: grid; gap: 12px; border: 1px solid var(--rule); border-radius: 8px; padding: 14px; background: var(--room-2); }
 .descent-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: stretch; }
 .telemetry.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -217,7 +221,10 @@ footer a { color: var(--ink-2); }
 .crew p { margin: 0; font-size: 14.5px; color: var(--ink); }
 .crew p b { color: var(--accent); font-weight: 600; }
 .crew .actions { align-items: center; }
+.auto.rr { display: flex; align-items: flex-start; margin: 0; line-height: 1.4; }
+.auto.rr input { margin-top: 3px; }
 .auto { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-2); margin-left: auto; }
+.landed.crash { background: rgba(255,138,122,.08); border-color: rgba(255,138,122,.4); color: #ff8a7a; }
 .landed { margin: 0; padding: 10px 12px; border-radius: 6px; background: rgba(141,255,143,.08); border: 1px solid rgba(141,255,143,.35); color: var(--el); font-size: 15px; }
 .seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg.three button { padding: 8px 10px; }
@@ -281,12 +288,14 @@ footer a { color: var(--ink-2); }
           <button class="run" id="btnPause" type="button">Pausar</button>
           <button class="run" id="btnReset" type="button">Reiniciar AGC</button>
           <button class="run" id="btnFast" type="button">Acelerar ×10</button>
+          <button class="run" id="btnSound" type="button" aria-pressed="false">Sonido: no</button>
         </div>
       </div>
 
       <div class="panel">
         <h2>Descenso del Apollo 11</h2>
         <p class="kbd">Carga el computador del Eagle tal como estaba 15 minutos antes del inicio del descenso motorizado (memoria reconstruida por el proyecto NASSP). Luminary099 retoma P63, enciende el motor, frena, pasa a P64 y aterriza; la nave, el motor de descenso y el radar de aterrizaje se simulan aquí. Con la tripulación automática solo miras; sin ella, haz tú cada paso. Usa Acelerar ×10.</p>
+        <label class="auto rr"><input type="checkbox" id="rrNoise" checked> Radar de encuentro conectado como en el Apollo 11: sus CDU desfasados roban ~15 % de los ciclos del AGC y provocan las alarmas 1201 y 1202. Desmárcalo y no hay alarmas.</label>
         <div class="actions"><button class="run" id="btnPdi" type="button">Cargar PDI −15 min</button></div>
       </div>
 
@@ -311,6 +320,10 @@ footer a { color: var(--ink-2); }
     </div>
     <p class="craft-note" id="craftNote" hidden>La nave simulada es el Módulo Lunar. Con Comanche055 el computador corre sin sensores.</p>
     <div class="descent" id="descent" hidden>
+      <figure class="window-box">
+        <div class="lmwin"><canvas id="winGl" aria-hidden="true"></canvas><canvas id="winHud" role="img" aria-label="Vista por la ventana del comandante con la retícula del LPD"></canvas></div>
+        <figcaption>Ventana del comandante · retícula del LPD en grados bajo el eje +Z · Luna esférica con relieve procedural, Sol a 11° sobre el horizonte</figcaption>
+      </figure>
       <div class="descent-top">
         <dl class="telemetry six">
           <div><dt>Altura</dt><dd id="dAlt">—</dd></div>
@@ -379,7 +392,7 @@ footer a { color: var(--ink-2); }
   <footer>
     <p>Software de vuelo: MIT Instrumentation Laboratory (equipo de Margaret Hamilton), dominio público. Transcripción y emulador: <a href="https://github.com/virtualagc/virtualagc" target="_blank" rel="noopener">Virtual AGC</a> de Ron Burkey y colaboradores, licencia GPLv2. Los binarios ensamblados coinciden byte a byte con las cuerdas de vuelo.</p>
     <p>Código fuente de este sitio (puente en C, simulador y plantilla), GPLv2: <a href="https://github.com/rvielma/apollo11-dsky" target="_blank" rel="noopener">github.com/rvielma/apollo11-dsky</a>.</p>
-    <p>Con Luminary099 el AGC vuela un LM simulado: plataforma inercial, actitud, chorros RCS, motor de descenso con su acelerador, acelerómetros y radar de aterrizaje sobre una Luna esférica. Sin radar de encuentro, terreno ni el cardán del motor. Estado de partida del descenso: proyecto <a href="https://github.com/orbiternassp/NASSP" target="_blank" rel="noopener">NASSP</a> (GPLv2).</p>
+    <p>Con Luminary099 el AGC vuela un LM simulado: plataforma inercial, actitud, chorros RCS, motor de descenso con su acelerador, acelerómetros, radar de aterrizaje sobre una Luna esférica y el robo de ciclos del radar de encuentro que causó las alarmas 1201 y 1202. Sin terreno ni el cardán del motor. Sonidos de cabina sintetizados. Audio de la misión: canal de Asuntos Públicos de NASA (Johnson Space Center) vía el <a href="https://apollojournals.org/alsj/a11/a11.landing.html" target="_blank" rel="noopener">Apollo Lunar Surface Journal</a>, dominio público. Estado de partida del descenso: proyecto <a href="https://github.com/orbiternassp/NASSP" target="_blank" rel="noopener">NASSP</a> (GPLv2).</p>
   </footer>
 </div>
 
@@ -508,8 +521,15 @@ const ESCENARIO = %%ESCENARIO%%;
   function wasiStub() {
     return new Proxy({}, { get: (_, k) => (...a) => { if (k === "proc_exit") throw new Error("exit " + a[0]); return 8; } });
   }
+  // El módulo se compila una vez; cada arranque crea una instancia nueva. El motor guarda estado
+  // en variables estáticas (cola de pulsos de los CDU, torque de giróscopos) que agc_boot no borra:
+  // reutilizar la instancia arrastraría pulsos viejos a la nueva sesión.
+  let wasmModule = null;
   async function loadEngine() {
-    const { instance } = await WebAssembly.instantiate(b64(WASM_B64), { wasi_snapshot_preview1: wasiStub() });
+    wasmModule = await WebAssembly.compile(b64(WASM_B64));
+  }
+  function newEngine() {
+    const instance = new WebAssembly.Instance(wasmModule, { wasi_snapshot_preview1: wasiStub() });
     agc = instance.exports;
     if (agc._initialize) agc._initialize();
     sim = LMSim(agc);
@@ -523,6 +543,7 @@ const ESCENARIO = %%ESCENARIO%%;
   // energía: conserva la memoria y su protección de reinicio retoma P63 donde estaba.
   let inScenario = false;
   function boot(which, scenario = false) {
+    newEngine();
     rope = which;
     inScenario = scenario;
     const bytes = b64(ROPES[which]);
@@ -550,8 +571,10 @@ const ESCENARIO = %%ESCENARIO%%;
       for (let a = 0o10; a < 0o4000; a++) agc.agc_set_erasable(a, mem[a]);
       for (const ch in ESCENARIO.canales) agc.agc_set_chan(parseInt(ch, 8), ESCENARIO.canales[ch]);
       sim.initFromMemory();   // nave donde el AGC cree que está; motor armado; antena en posición 1
+      agc.agc_rr_noise($("rrNoise").checked ? RR_NOISE_PPS : 0);
       setMode("auto");
       crewReset();
+      win.start();
       drawFdai(true);
       return;
     }
@@ -591,6 +614,7 @@ const ESCENARIO = %%ESCENARIO%%;
   function press(id) {
     if (!agc) return;
     if (typeof id === "function") { id(); return; }
+    if (id !== "PRO_UP") snd.key();
     if (id === "PRO") { agc.agc_pro(1); keyEls.PRO.classList.add("down"); return; }
     if (id === "PRO_UP") { agc.agc_pro(0); keyEls.PRO.classList.remove("down"); return; }
     if (id in KEY) agc.agc_key(KEY[id]);
@@ -795,7 +819,8 @@ const ESCENARIO = %%ESCENARIO%%;
   let lastReadout = 0;
   function renderCraft() {
     drawFdai(false);
-    if (inScenario) renderDescent();
+    snd.update();
+    if (inScenario) { renderDescent(); win.draw(); }
     const now = performance.now();
     for (const [name, f] of sim.jets) {
       if (f > 0) jetSeen[name] = now;
@@ -809,13 +834,315 @@ const ESCENARIO = %%ESCENARIO%%;
     }
   }
 
+  // ── Sonido: cabina sintetizada con Web Audio y clips reales de la misión ──
+  // Todo se genera en el navegador salvo los clips (audio/*.mp3, grabaciones de NASA). Arranca
+  // apagado: el navegador exige un gesto del usuario para crear el contexto de audio. Los clips se
+  // decodifican en ese mismo contexto y suenan por él: un <audio> creado a mitad del descenso puede
+  // quedar bloqueado por la política de reproducción automática del navegador.
+  const CLIPS = ["pdi", "1202", "go-alarma", "1201", "contact", "eagle-landed"];
+  const snd = (() => {
+    let ctx = null, on = false, master, noiseBuf, engine, engineGain, lastJets = 0, jetPrev = new Set();
+    const clips = {}, played = new Set();
+    function loadClips() {
+      for (const name of CLIPS) {
+        fetch("audio/" + name + ".mp3")
+          .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status))))
+          .then((buf) => ctx.decodeAudioData(buf))
+          .then((audio) => { clips[name] = audio; })
+          .catch(() => {});        // si un clip no está, se sigue sin él
+      }
+    }
+    function init() {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain(); master.gain.value = 0.7; master.connect(ctx.destination);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const ch = noiseBuf.getChannelData(0);
+      let b = 0;
+      for (let i = 0; i < ch.length; i++) { const w = Math.random() * 2 - 1; b = (b + 0.02 * w) / 1.02; ch[i] = b * 3.5 + w * 0.15; }  // ruido pardo + algo de blanco
+      // Motor: ruido en bucle, pasabajos y un temblor lento
+      engine = ctx.createBufferSource(); engine.buffer = noiseBuf; engine.loop = true;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 220;
+      engineGain = ctx.createGain(); engineGain.gain.value = 0;
+      engine.connect(lp).connect(engineGain).connect(master);
+      engine.start();
+      loadClips();
+    }
+    function burst(dur, type, freq, q, gain) {
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+      src.playbackRate.value = 1 + Math.random() * 0.2;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = ctx.createGain(), t0 = ctx.currentTime;
+      g.gain.setValueAtTime(gain, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(f).connect(g).connect(master);
+      src.start(t0, Math.random()); src.stop(t0 + dur + 0.02);
+    }
+    function tone(freq, start, dur, gain) {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t0 = ctx.currentTime + start;
+      o.type = "square"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(gain, t0 + 0.01);
+      g.gain.setValueAtTime(gain, t0 + dur - 0.02); g.gain.linearRampToValueAtTime(0, t0 + dur);
+      o.connect(g).connect(master); o.start(t0); o.stop(t0 + dur + 0.02);
+    }
+    function clip(name) {
+      if (!on || played.has(name) || !clips[name]) return null;
+      played.add(name);
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = clips[name]; g.gain.value = 1.3;
+      src.connect(g).connect(master);
+      src.start();
+      return src;                    // dispara "ended" al terminar
+    }
+    return {
+      toggle() {
+        on = !on;
+        if (on && !ctx) init();
+        if (ctx) (on ? ctx.resume() : ctx.suspend());
+        return on;
+      },
+      get on() { return on; },
+      reset() { played.clear(); jetPrev = new Set(); },
+      key() { if (on) { burst(0.025, "bandpass", 3200, 1.2, 0.5); burst(0.05, "lowpass", 300, 0.7, 0.35); } },
+      alarm() { if (on) for (let i = 0; i < 3; i++) tone(i % 2 ? 1500 : 1000, i * 0.18, 0.15, 0.08); },
+      clip,
+      update() {
+        if (!on || !ctx) return;
+        // Chorros: un golpe por cada chorro que se acaba de encender (máx. ~30 por segundo)
+        const now = performance.now(), firing = new Set();
+        for (const [name, f] of sim.jets) if (f > 0) firing.add(name);
+        let fresh = 0;
+        for (const n of firing) if (!jetPrev.has(n)) fresh++;
+        jetPrev = firing;
+        if (fresh && now - lastJets > 33) { lastJets = now; burst(0.07, "lowpass", 900, 0.8, Math.min(0.9, 0.35 + 0.12 * fresh)); }
+        // Motor de descenso: volumen según el empuje
+        const e = sim.engine;
+        engineGain.gain.setTargetAtTime(rope === "LM" && e.on ? 0.25 + 0.75 * Math.min(1, e.fraction) : 0, ctx.currentTime, 0.15);
+      },
+    };
+  })();
+  function soundButton(on) {
+    const b = $("btnSound");
+    b.textContent = on ? "Sonido: sí" : "Sonido: no";
+    b.setAttribute("aria-pressed", on);
+  }
+  $("btnSound").addEventListener("click", () => {
+    const on = snd.toggle();
+    soundButton(on);
+    try { localStorage.setItem("apollo11-sonido", on ? "1" : "0"); } catch (e) { /* sin almacenamiento */ }
+  });
+  // Si el sonido quedó activado en una visita anterior, se reactiva con el primer gesto
+  // (el navegador no permite empezar a sonar sin uno).
+  try {
+    if (localStorage.getItem("apollo11-sonido") === "1") {
+      const arm = (e) => {
+        if (e.target.closest && e.target.closest("#btnSound")) return;   // ese clic ya lo maneja el botón
+        if (!snd.on) soundButton(snd.toggle());
+      };
+      document.addEventListener("pointerdown", arm, { once: true, capture: true });
+      document.addEventListener("keydown", arm, { once: true, capture: true });
+    }
+  } catch (e) { /* sin almacenamiento */ }
+  // Al terminar un clip, el que le respondía en la misión
+  const then = (a, name) => { if (a) a.addEventListener("ended", () => snd.clip(name), { once: true }); };
+  function onAlarm(code) {
+    snd.alarm();
+    if (code === "1202") then(snd.clip("1202"), "go-alarma");
+    if (code === "1201") snd.clip("1201");
+  }
+
+  // ── Ventana del comandante ──
+  // Un rayo por píxel contra la Luna esférica (WebGL), con relieve procedural de cráteres a
+  // varias escalas según la distancia. La cámara mira hacia adelante (+Z del LM) inclinada 35°
+  // hacia −X, como la ventana del comandante; arriba en pantalla es +X. Las coordenadas de la
+  // superficie se miden en el plano tangente del sitio de alunizaje previsto, así la precisión
+  // del float alcanza donde importa: cerca del suelo.
+  const win = (() => {
+    const glc = $("winGl"), hud = $("winHud"), hc = hud.getContext("2d");
+    const gl = glc.getContext("webgl", { antialias: false, preserveDrawingBuffer: false });
+    const TILT = 35 * Math.PI / 180, HALF_V = 40 * Math.PI / 180;
+    const EYE = 4.5;                   // m: altura de la ventana sobre las patas del LM
+    let prog = null, loc = {}, ref = null, lastDraw = 0;
+    const VS = "attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }";
+    const FS = `precision highp float;
+uniform vec2 uRes; uniform vec3 uFwd, uRight, uUp, uSun; uniform float uEta, uR, uTan; uniform vec2 uCam;
+float hash(vec2 p) { p = mod(p, 289.0); p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
+float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), f.x), f.y); }
+float craters(vec2 p, float s, float density) {
+  vec2 q = p / s, c = floor(q); float h = 0.0;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec2 cell = c + vec2(float(i), float(j));
+    float present = step(1.0 - density, hash(cell + 11.3));
+    vec2 o = vec2(hash(cell), hash(cell + 7.7));
+    float r = 0.08 + 0.37 * pow(hash(cell + 3.1), 2.0);
+    float d = length(q - cell - o) / r;
+    float bowl = d < 1.0 ? (d * d - 1.0) * 0.45 : 0.0;
+    float rim = exp(-(d - 1.0) * (d - 1.0) * 14.0) * 0.18;
+    h += present * (bowl + rim) * r;
+  }
+  return h * s;
+}
+float heightAt(vec2 p, float foot) {
+  // Mar lunar: pocos cráteres grandes, más a escalas chicas, y ondulación suave
+  float h = 0.0, s = 6000.0, density = 0.12;
+  for (int k = 0; k < 8; k++) {
+    float w = smoothstep(foot * 2.0, foot * 10.0, s);
+    if (w <= 0.0) break;
+    h += w * (craters(p + vec2(37.0, 91.0) * float(k), s, density) + 0.04 * s * (noise(p / s * 2.3) - 0.5));
+    s *= 0.36; density = min(density * 1.35, 0.55);
+  }
+  return h;
+}
+void main() {
+  vec2 uv = (gl_FragCoord.xy / uRes) * 2.0 - 1.0;
+  vec3 d = normalize(uFwd + uRight * uv.x * uTan * (uRes.x / uRes.y) + uUp * uv.y * uTan);
+  float A = 1.0 + uEta, dz = d.z, disc = A * A * dz * dz - uEta * (2.0 + uEta);
+  vec3 col = vec3(0.0);
+  if (dz < 0.0 && disc > 0.0) {
+    float t = uR * uEta * (2.0 + uEta) / (-A * dz + sqrt(disc));
+    vec3 hit = d * t;
+    vec2 tp = uCam + hit.xy;
+    vec3 n0 = normalize(hit / uR + vec3(0.0, 0.0, A));
+    // Cerca del horizonte la superficie se ve de lado y un píxel cubre mucho más terreno
+    float foot = max(t * uTan * 2.0 / uRes.y / max(dot(n0, -d), 0.04), 0.02);
+    float e = max(foot, 0.05);
+    float h0 = heightAt(tp, foot), hx = heightAt(tp + vec2(e, 0.0), foot), hy = heightAt(tp + vec2(0.0, e), foot);
+    vec3 n = normalize(n0 - vec3((hx - h0) / e, (hy - h0) / e, 0.0));
+    // Regolito: Lommel-Seeliger (brilla hacia donde viene la luz aun con Sol rasante) más el
+    // efecto de oposición cerca de la dirección contraria al Sol.
+    float mu0 = max(dot(n, uSun), 0.0), mu = max(dot(n, -d), 0.05);
+    float ls = mu0 / (mu0 + mu);
+    float g = acos(clamp(dot(-d, uSun), -1.0, 1.0));
+    float surge = 1.0 + 0.35 * exp(-g / 0.08);
+    float alb = 0.5 + 0.2 * (noise(tp / 9000.0) - 0.5) + 0.12 * (noise(tp / 700.0) - 0.5) + 0.08 * (noise(tp / 9.0) - 0.5);
+    col = vec3(0.68, 0.66, 0.62) * alb * (0.015 + 2.4 * ls * surge);
+    col = pow(col, vec3(0.85));
+  }
+  gl_FragColor = vec4(col, 1.0);
+}`;
+    function init() {
+      if (!gl || prog) return !!prog;
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+      gl.linkProgram(prog); gl.useProgram(prog);
+      const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const a = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+      for (const u of ["uRes", "uFwd", "uRight", "uUp", "uSun", "uEta", "uR", "uTan", "uCam"]) loc[u] = gl.getUniformLocation(prog, u);
+      return true;
+    }
+    const V = {
+      dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+      cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+      norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]); return a.map((x) => x / l); },
+      add: (a, b, s = 1) => a.map((x, i) => x + b[i] * s),
+    };
+    // Base local (este, norte, arriba) en un punto, con el este según la rotación lunar
+    function basis(up) {
+      const e = V.norm(V.cross(V.norm(sim.moonRate), up));
+      return { e, n: V.cross(up, e), u: up };
+    }
+    function start() {
+      // Referencia del plano tangente: el punto bajo el LM al cargar. Sol a 11° de elevación a la
+      // espalda del LM en el sitio de alunizaje, que queda 65,5° de arco más adelante en la órbita
+      // (15 min de costa hasta el PDI más el descenso; medido en la simulación de referencia).
+      const pos = sim.position, vel = sim.velocity, up0 = V.norm(pos);
+      const fwd0 = V.norm(V.add(vel, up0, -V.dot(vel, up0)));
+      const th = 65.5 * Math.PI / 180, el = 11 * Math.PI / 180;
+      const upL = V.norm(V.add(up0.map((x) => x * Math.cos(th)), fwd0, Math.sin(th)));
+      const fwdL = V.norm(V.add(fwd0.map((x) => x * Math.cos(th)), up0, -Math.sin(th)));
+      // El plano tangente se mide desde el sitio previsto: cerca del suelo las coordenadas son chicas.
+      ref = { b: basis(upL), sun: V.norm(V.add(upL.map((x) => x * Math.sin(el)), fwdL, -Math.cos(el))) };
+    }
+    function camera() {
+      const B = sim.body, col = (k) => [B[0][k], B[1][k], B[2][k]];
+      const X = col(0), Z = col(2);
+      const fwd = V.norm(V.add(Z.map((x) => x * Math.cos(TILT)), X, -Math.sin(TILT)));
+      const up = V.norm(V.add(X.map((x) => x * Math.cos(TILT)), Z, Math.sin(TILT)));
+      return { fwd, up, right: V.cross(fwd, up), X, Z };
+    }
+    function draw() {
+      if (!ref || !sim.surfaceRadius) return;
+      const now = performance.now();
+      if (now - lastDraw < 33) return;
+      lastDraw = now;
+      const box = glc.getBoundingClientRect();
+      if (box.width < 10) return;
+      const q = Math.min(window.devicePixelRatio || 1, 1.25) * 0.75;
+      const W = Math.round(box.width * q), H = Math.round(box.height * q);
+      if (glc.width !== W || glc.height !== H) { glc.width = W; glc.height = H; }
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (hud.width !== Math.round(box.width * dpr)) { hud.width = Math.round(box.width * dpr); hud.height = Math.round(box.height * dpr); }
+      const R = sim.surfaceRadius, pos = sim.position, rr = Math.hypot(...pos);
+      const up = pos.map((x) => x / rr), b = basis(up), cam = camera();
+      const L = (v) => [V.dot(v, b.e), V.dot(v, b.n), V.dot(v, b.u)];
+      const camE = R * Math.asin(Math.max(-1, Math.min(1, V.dot(up, ref.b.e))));
+      const camN = R * Math.asin(Math.max(-1, Math.min(1, V.dot(up, ref.b.n))));
+      if (gl && init()) {
+        gl.viewport(0, 0, W, H);
+        gl.uniform2f(loc.uRes, W, H);
+        gl.uniform3fv(loc.uFwd, L(cam.fwd)); gl.uniform3fv(loc.uRight, L(cam.right)); gl.uniform3fv(loc.uUp, L(cam.up));
+        gl.uniform3fv(loc.uSun, L(ref.sun));
+        gl.uniform1f(loc.uEta, (Math.max(rr - R, 0) + EYE) / R); gl.uniform1f(loc.uR, R); gl.uniform1f(loc.uTan, Math.tan(HALF_V));
+        gl.uniform2f(loc.uCam, camE, camN);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+      hudDraw(cam);
+    }
+    // Retícula del LPD: ángulos bajo el plano perpendicular a X (desde +Z hacia −X), como LOOKANGL
+    function hudDraw(cam) {
+      const Wc = hud.width, Hc = hud.height, k = Hc / 2 / Math.tan(HALF_V);
+      hc.clearRect(0, 0, Wc, Hc);
+      const proj = (v) => {
+        const z = V.dot(v, cam.fwd); if (z <= 0.05) return null;
+        return [Wc / 2 + (V.dot(v, cam.right) / z) * k, Hc / 2 - (V.dot(v, cam.up) / z) * k];
+      };
+      const ang = (deg) => { const a = deg * Math.PI / 180; return V.add(cam.Z.map((x) => x * Math.cos(a)), cam.X, -Math.sin(a)); };
+      const s = Hc / 400;
+      hc.strokeStyle = "rgba(255,182,39,.75)"; hc.fillStyle = "rgba(255,182,39,.9)"; hc.lineWidth = 1.5 * s;
+      hc.font = `${11 * s}px 'JetBrains Mono', monospace`; hc.textBaseline = "middle";
+      const top = proj(ang(-5)), bot = proj(ang(75));
+      if (top && bot) { hc.beginPath(); hc.moveTo(top[0], top[1]); hc.lineTo(bot[0], bot[1]); hc.stroke(); }
+      for (let a = 0; a <= 70; a += 5) {
+        const p = proj(ang(a)); if (!p) continue;
+        const len = (a % 10 ? 6 : 14) * s;
+        hc.beginPath(); hc.moveTo(p[0] - len, p[1]); hc.lineTo(p[0] + len, p[1]); hc.stroke();
+        if (a % 10 === 0) hc.fillText(String(a), p[0] + 18 * s, p[1]);
+      }
+      // En P64 el AGC muestra en N64 R1 el ángulo del LPD: la marca donde va a posarse
+      const st = vnState();
+      if (inScenario && st.noun === "64") {
+        // R1 de N64: dos dígitos de segundos para redesignar y dos del ángulo del LPD
+        const deg = parseInt((dg(disp[6], 1) ?? "") + (dg(disp[6], 0) ?? ""), 10);
+        const p = Number.isFinite(deg) ? proj(ang(deg)) : null;
+        if (p) {
+          hc.strokeStyle = "#8dff8f"; hc.lineWidth = 2.5 * s;
+          hc.beginPath(); hc.moveTo(p[0] - 30 * s, p[1]); hc.lineTo(p[0] + 30 * s, p[1]); hc.stroke();
+          hc.fillStyle = "#8dff8f"; hc.textAlign = "right"; hc.fillText(`LPD ${deg}°`, p[0] - 36 * s, p[1]); hc.textAlign = "left";
+        }
+      }
+      // Marco de la ventana
+      hc.strokeStyle = "rgba(160,165,170,.35)"; hc.lineWidth = 10 * s;
+      hc.strokeRect(0, 0, Wc, Hc);
+    }
+    return { start, draw };
+  })();
+
   // ── Descenso: asistente de tripulación y telemetría ──
   // Cada paso es lo que hacía la tripulación del Apollo 11 ante cada pedido del AGC. Con la
   // tripulación automática se hace solo; si no, el botón lo hace cuando tú decides.
   const DPS_FULL_KG = 8355;
+  const RR_NOISE_PPS = 6400;          // pulsos por segundo en cada CDU del radar de encuentro
+  $("rrNoise").addEventListener("change", (e) => { if (agc && inScenario) agc.agc_rr_noise(e.target.checked ? RR_NOISE_PPS : 0); });
+  const ALARM_TEXT = {
+    "1202": "<b>Alarma 1202:</b> el ejecutivo se quedó sin conjuntos de trabajo (core sets). El software descarta lo no esencial, se reinicia y sigue guiando. En 1969 Houston respondió «we're GO on that alarm».",
+    "1201": "<b>Alarma 1201:</b> el ejecutivo se quedó sin áreas de trabajo VAC. Mismo origen que la 1202: el radar de encuentro robando ciclos. El guiado sigue.",
+  };
   let crew;
   function crewReset() {
-    crew = { ignitedAt: null, yaw: null, yawed: false, v57: false, pro64: false, busyUntil: 0, landed: false };
+    crew = { ignitedAt: null, yaw: null, yawed: false, v57: false, pro64: false, busyUntil: 0, landed: false,
+      fail: [0, 1, 2].map((i) => agc.agc_erasable(0o375 + i)), alarm: null, contactHeard: false };
+    snd.reset();
     $("landedMsg").hidden = true;
   }
   const regDigits = (r) => {
@@ -824,7 +1151,8 @@ const ESCENARIO = %%ESCENARIO%%;
   };
   function crewStep() {
     const s = vnState(), prog = (dg(disp[11], 1) ?? " ") + (dg(disp[11], 0) ?? " ");
-    if (sim.landed) return { text: "<b>Eagle ha aterrizado.</b>" };
+    if (sim.landed) return { text: sim.touchdown.crash ? "<b>Impacto contra la superficie.</b>" : "<b>Eagle ha aterrizado.</b>" };
+    const alarmShown = crew.alarm && cycles - crew.alarm.at < 12 * AGC_HZ ? ALARM_TEXT[crew.alarm.code] : null;
     if (crew.yaw) return { text: "Girando el LM 180° sobre su eje de empuje para que el radar vea el suelo…" };
     if (prog === "63" && s.verb === "50" && s.noun === "25" && s.flash && regDigits(1) === "00014")
       return { text: "P63 ofrece una alineación fina con estrellas. La tripulación la saltaba.", label: "Saltar (ENTR)", keys: "E" };
@@ -838,6 +1166,7 @@ const ESCENARIO = %%ESCENARIO%%;
       return { text: "El radar de aterrizaje ya mide altura y velocidad. Falta permitir que el AGC use sus datos.", label: "Aceptar el radar (V57)", keys: "V57E", after: () => { crew.v57 = true; } };
     if (prog === "64" && s.verb === "06" && s.noun === "64" && s.flash)
       return { text: "<b>P64:</b> el LM se endereza y la tripulación ve el sitio. El AGC pide confirmación.", label: "Confirmar (PRO)", keys: "P", after: () => { crew.pro64 = true; } };
+    if (alarmShown) return { text: alarmShown };
     if (crew.ignitedAt === null) return { text: s.noun === "62" ? "Cuenta regresiva a la ignición (R2: minutos y segundos)." : "Esperando al AGC…" };
     if (prog === "63") return { text: "<b>P63, frenado:</b> motor a fondo; el AGC baja el empuje cuando lo pide la guía." };
     if (prog === "64") return { text: "<b>P64, aproximación:</b> el AGC lleva el LM hacia el sitio. Puedes tomar el control con ROD (P66)." };
@@ -858,7 +1187,17 @@ const ESCENARIO = %%ESCENARIO%%;
   }
   function crewTick(dt) {
     if (!crew) return;
+    // Alarmas nuevas en FAILREG (las tres últimas que registró el AGC)
+    const f = [0, 1, 2].map((i) => agc.agc_erasable(0o375 + i));
+    if (f.some((x, i) => x !== crew.fail[i])) {
+      const code = (f.find((x, i) => x !== crew.fail[i]) & 0o7777).toString(8);
+      crew.fail = f;
+      crew.alarm = { code, at: cycles };
+      onAlarm(code);
+    }
     if (sim.engine.on && crew.ignitedAt === null) crew.ignitedAt = cycles;
+    if (crew.ignitedAt === null && vnState().verb === "99") snd.clip("pdi");
+    if (sim.contact && !crew.contactHeard) { crew.contactHeard = true; then(snd.clip("contact"), "eagle-landed"); }
     if (crew.yaw) {                                  // giro de 180° en guiñada, luego frenar y AUTO
       if (!crew.yaw.settle) {
         crew.yaw.ang += Math.abs(sim.rates[0]) * dt;
@@ -902,7 +1241,10 @@ const ESCENARIO = %%ESCENARIO%%;
       const td = sim.touchdown;
       const m = $("landedMsg");
       m.hidden = false;
-      m.textContent = `Eagle ha aterrizado. Contacto a ${fmtNum(-td.vVert / 0.3048, 1)} ft/s vertical y ${fmtNum(td.vHoriz / 0.3048, 1)} ft/s horizontal, con ${fmtNum((sim.fuel / DPS_FULL_KG) * 100, 1)} % de combustible, ${durTxt((cycles - crew.ignitedAt) / AGC_HZ)} después de encender el motor (el Apollo 11 tardó 12 min 36 s).`;
+      m.classList.toggle("crash", td.crash);
+      m.textContent = td.crash
+        ? `Impacto a ${fmtNum(-td.vVert / 0.3048, 1)} ft/s vertical y ${fmtNum(td.vHoriz / 0.3048, 1)} ft/s horizontal: el tren de aterrizaje aguantaba unos 10 ft/s.`
+        : `Eagle ha aterrizado. Contacto a ${fmtNum(-td.vVert / 0.3048, 1)} ft/s vertical y ${fmtNum(td.vHoriz / 0.3048, 1)} ft/s horizontal, con ${fmtNum((sim.fuel / DPS_FULL_KG) * 100, 1)} % de combustible, ${durTxt((cycles - crew.ignitedAt) / AGC_HZ)} después de encender el motor (el Apollo 11 tardó 12 min 36 s).`;
     }
   }
 

@@ -225,6 +225,8 @@ function LMSim(agc) {
         if (h <= 0) {
           const up = pos.map((x) => x / (h + landR)), rel = sub(vel, cross(omega, pos));
           touchdown = { vVert: dot(rel, up), vHoriz: Math.hypot(...sub(rel, up.map((x) => x * dot(rel, up)))) };
+          // Límites del tren de aterrizaje del LM: ~10 ft/s vertical y ~4 ft/s horizontal.
+          touchdown.crash = -touchdown.vVert > 3.05 || touchdown.vHoriz > 1.22;
           // Al posarse la tripulación apaga el motor (ENGINE STOP) y lo desarma.
           landed = true; engineOn = false; thrust = 0;
           agc.agc_set_chan(0o30, agc.agc_chan(0o30) | 0o4);
@@ -377,6 +379,9 @@ function LMSim(agc) {
     get mass() { return mass; },
     get engine() { return { on: engineOn, thrust, fraction: thrust / 46706 }; },
     get radar() { return lr; },
+    // Para la vista por la ventana: radio de la superficie y rotación lunar (marco inercial)
+    get surfaceRadius() { return landR; },
+    get moonRate() { return omega.slice(); },
     get fuel() { return dpsFuel; },
     get landed() { return landed; },
     get touchdown() { return touchdown; },

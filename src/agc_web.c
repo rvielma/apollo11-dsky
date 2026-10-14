@@ -60,7 +60,36 @@ void ChannelOutput(agc_t *s, int Channel, int Value) {
     Disp[18]++;
   }
 }
-int ChannelInput(agc_t *s) { (void)s; return 0; }
+/* Incrementos de contador pendientes: el hardware los aplica robando un ciclo de memoria a la
+ * CPU cada uno. El motor llama a ChannelInput en cada ciclo; si aquí se aplica un incremento y se
+ * devuelve 1, ese ciclo no ejecuta instrucciones pero los temporizadores siguen avanzando. */
+#define PEND_MAX 4096
+static uint16_t Pend[PEND_MAX];          /* (contador << 8) | tipo */
+static int PendHead, PendLen;
+/* Ruido del radar de encuentro (la causa de las alarmas 1201/1202 del Apollo 11): con la
+ * excitación de sus CDU desfasada respecto de la del AGC, los contadores CDUT (035) y CDUS (036)
+ * suben y bajan sin parar a la tasa máxima. RrNoise = pulsos por segundo en cada contador. */
+static int RrNoise, RrAcc, RrToggle;
+
+int ChannelInput(agc_t *s) {
+  if (RrNoise) {
+    RrAcc += 2 * RrNoise;                        /* dos contadores */
+    if (RrAcc >= 1024000 / 12) {
+      RrAcc -= 1024000 / 12;
+      RrToggle++;
+      UnprogrammedIncrement(s, (RrToggle & 1) ? 035 : 036, (RrToggle & 2) ? 3 : 1);
+      return 1;
+    }
+  }
+  if (PendLen) {
+    uint16_t e = Pend[PendHead];
+    PendHead = (PendHead + 1) % PEND_MAX;
+    PendLen--;
+    UnprogrammedIncrement(s, e >> 8, e & 0377);
+    return 1;
+  }
+  return 0;
+}
 void ChannelRoutine(agc_t *s) { (void)s; }
 void ShiftToDeda(agc_t *s, int Data) { (void)s; (void)Data; }
 /* El AGC pidió un dato de radar (canal 013, bits 1-3 eligen cuál; el motor ya maneja la espera
@@ -81,6 +110,8 @@ EXPORT(agc_boot) int agc_boot(int nbytes) {
   memset(&State, 0, sizeof(State));
   memset(Disp, 0, sizeof(Disp));
   memset(Io, 0, sizeof(Io));
+  PendHead = PendLen = 0;
+  RrNoise = RrAcc = RrToggle = 0;
   agc_engine_init(&State, NULL, NULL, 0);
   if (nbytes & 1 || nbytes > (int)sizeof(Rom)) return 1;
   State.CheckParity = 0;
@@ -120,8 +151,17 @@ EXPORT(agc_run) int agc_run(int n) {
   return Disp[18];
 }
 
-/* Pulso externo a un contador (CDU, PIPA, etc.): tipos de UnprogrammedIncrement. */
-EXPORT(agc_inc) void agc_inc(int counter, int type) { UnprogrammedIncrement(&State, counter, type); }
+/* Pulso externo a un contador: tipos de UnprogrammedIncrement. Los CDU de la IMU (032-034) van a
+ * la cola de CDU del motor, que ya cobra un ciclo por pulso; el resto espera su ciclo en Pend. */
+EXPORT(agc_inc) void agc_inc(int counter, int type) {
+  if (counter >= 032 && counter <= 034) { UnprogrammedIncrement(&State, counter, type); return; }
+  if (PendLen == PEND_MAX) return;
+  Pend[(PendHead + PendLen) % PEND_MAX] = (uint16_t)((counter << 8) | (type & 0377));
+  PendLen++;
+}
+
+/* Ruido del radar de encuentro, en pulsos por segundo por contador (0 = apagado). */
+EXPORT(agc_rr_noise) void agc_rr_noise(int pps) { RrNoise = pps < 0 ? 0 : pps; RrAcc = 0; }
 
 /* Canales de E/S: entradas 030-033 (activas en bajo) y salidas 011-014. */
 EXPORT(agc_chan) int agc_chan(int ch) { return State.InputChannel[ch & 0377]; }

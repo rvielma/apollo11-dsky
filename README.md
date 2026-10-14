@@ -6,6 +6,8 @@ Con Luminary099 el AGC vuela un LM simulado: plataforma inercial (IMU), actitud 
 
 **Descenso del Apollo 11.** Un botón carga el computador del Eagle 15 minutos antes del descenso motorizado (memoria borrable del escenario de NASSP) y el software de vuelo hace el resto: P63 (frenado), P64 (aproximación) y P65 o P66 hasta posarse, con el motor de descenso, los acelerómetros y el radar de aterrizaje simulados. Un asistente hace lo que hacía la tripulación (ENTR, PRO para encender, giro a ventanas arriba, `V57` para aceptar el radar, PRO en P64) o te deja hacerlo a ti. En la prueba de referencia se posa a ~3 ft/s con ~7 % de combustible, sin alarmas.
 
+**Las alarmas 1202 y 1201.** Con el interruptor "radar de encuentro como en el Apollo 11" (activo por defecto), los contadores de los CDU del radar de encuentro reciben pulsos sin parar, como en 1969 por la excitación desfasada de sus CDU, y cada pulso le roba un ciclo de memoria a la CPU. Luminary099 se satura en P63/P64, da 1202 y 1201, se reinicia por software y sigue guiando hasta posarse. Sin ese robo de ciclos no hay alarmas.
+
 ## Qué hay aquí
 
 ```
@@ -16,6 +18,8 @@ src/dsky_template.html  Plantilla del panel (HTML/CSS/JS) con marcadores para wa
 src/prueba_nave.js      Prueba en Node: IMU, autopiloto, palanca y el descenso completo hasta posarse.
 src/escenario_pdi.json  Memoria del computador del LM 15 min antes del PDI (de NASSP).
 src/extraer_escenario.py Regenera escenario_pdi.json desde el .scn de NASSP.
+src/recortar_audio.sh   Regenera audio/*.mp3 (clips de NASA) desde el ALSJ.
+audio/                  Clips de audio de la misión (no versionados en gw).
 src/build.sh            Clona Virtual AGC, ensambla las cuerdas, compila a wasm y regenera index.html.
 src/VIRTUALAGC_COMMIT   Commit exacto de Virtual AGC usado.
 ```
@@ -112,6 +116,13 @@ El puente implementa la API de canales que espera el motor (`ChannelOutput`, `Ch
 - PIPA: 1 cm/s por pulso, en ejes de la plataforma.
 - Radar de aterrizaje: el motor yaAGC maneja la espera y la interrupción RADARUPT; el puente responde en RNRAD (046) según el canal 013. Altura oblicua a lo largo del haz (1,079 o 5,395 ft por cuenta según la escala, canal 033 bit 9), velocidades VX/VY/VZ relativas al terreno en ejes de la antena con sesgo 12288. Antena en posición 1 (24°) o 2 (vertical, la manda el canal 012 bit 13 y allí se queda). Datos buenos por debajo de 50.000 ft si el haz ve el suelo: con ventanas hacia la Luna no lo ve, por eso el giro a ventanas arriba.
 - El canal 033 tiene que mostrar la antena en posición 1 antes del reinicio: el AGC la lee ahí y, si no, espera la posición 2 y da la alarma 522 con cada dato.
-- Contacto: a 1,7 m se enciende CONTACT; al llegar al suelo el motor se apaga y se desarma.
+- Contacto: a 1,7 m se enciende CONTACT; al llegar al suelo el motor se apaga y se desarma. Por encima de ~10 ft/s vertical o ~4 ft/s horizontal (límites del tren de aterrizaje) se informa como impacto.
+- Robo de ciclos: el puente aplica los incrementos de contador que vienen de fuera (PIPA y otros) dentro de `ChannelInput`, uno por ciclo; el motor no ejecuta instrucciones en ese ciclo pero los temporizadores avanzan, como en el hardware. Los CDU de la IMU ya pasan por la cola de CDU del motor, que también cobra un ciclo por pulso.
+- Radar de encuentro: solo su efecto sobre la CPU. `agc_rr_noise(pps)` alterna PCDU/MCDU en CDUT (035) y CDUS (036) a 6400 pulsos por segundo cada uno (~15 % de los ciclos).
+- Cada arranque crea una instancia nueva del módulo wasm: el motor guarda en variables estáticas la cola de pulsos de los CDU y el torque de giróscopos, que `agc_boot` no borra.
 
-Simplificaciones: Luna esférica (sin terreno), sin radar de encuentro (no hay alarmas 1201/1202), sin cardán del motor (el empuje pasa por el centro de masa), inercias constantes y aproximadas, empuje constante por chorro y bloqueo de gimbal simplificado (la plataforma es arrastrada pasados 85° de MGA).
+### Sonido
+
+Botón "Sonido": teclas del DSKY, chorros RCS, rumor del motor de descenso según el empuje y un tono de alarma, sintetizados con Web Audio. Clips reales de la misión en `audio/*.mp3`, disparados por eventos: autorización del PDI, 1202 (y al terminar, "we're go on that alarm"), 1201, "contact light" y "The Eagle has landed". Son tramos continuos del canal de Asuntos Públicos de NASA (Johnson Space Center, Audio Control Room) publicados en el Apollo Lunar Surface Journal; dominio público. `src/recortar_audio.sh` los regenera desde las grabaciones originales, con sus tiempos (gw no versiona los MP3).
+
+Simplificaciones: Luna esférica (sin terreno), radar de encuentro solo como robo de ciclos (no rastrea), sin cardán del motor (el empuje pasa por el centro de masa), inercias constantes y aproximadas, empuje constante por chorro y bloqueo de gimbal simplificado (la plataforma es arrastrada pasados 85° de MGA).
