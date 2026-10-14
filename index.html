@@ -294,7 +294,7 @@ footer a { color: var(--ink-2); }
 
       <div class="panel">
         <h2>Descenso del Apollo 11</h2>
-        <p class="kbd">Carga el computador del Eagle tal como estaba 15 minutos antes del inicio del descenso motorizado (memoria reconstruida por el proyecto NASSP). Luminary099 retoma P63, enciende el motor, frena, pasa a P64 y aterriza; la nave, el motor de descenso y el radar de aterrizaje se simulan aquí. Con la tripulación automática solo miras; sin ella, haz tú cada paso. Usa Acelerar ×10.</p>
+        <p class="kbd">Carga el computador del Eagle tal como estaba 15 minutos antes del inicio del descenso motorizado (memoria reconstruida por el proyecto NASSP). Luminary099 retoma P63, enciende el motor, frena, pasa a P64 y aterriza; la nave, el motor de descenso y el radar de aterrizaje se simulan aquí. Con la tripulación automática solo miras; sin ella, haz tú cada paso. Arranca a ×10: en tiempo real son 15 minutos de cuenta regresiva y 12 de descenso.</p>
         <label class="auto rr"><input type="checkbox" id="rrNoise" checked> Radar de encuentro conectado como en el Apollo 11: sus CDU desfasados roban ~15 % de los ciclos del AGC y provocan las alarmas 1201 y 1202. Desmárcalo y no hay alarmas.</label>
         <div class="actions"><button class="run" id="btnPdi" type="button">Cargar PDI −15 min</button></div>
       </div>
@@ -1570,7 +1570,11 @@ void main() {
     if (prog === "64" && s.verb === "06" && s.noun === "64" && s.flash)
       return { text: "<b>P64:</b> el LM se endereza y la tripulación ve el sitio. El AGC pide confirmación.", label: "Confirmar (PRO)", keys: "P", after: () => { crew.pro64 = true; } };
     if (alarmShown) return { text: alarmShown };
-    if (crew.ignitedAt === null) return { text: s.noun === "62" ? "Cuenta regresiva a la ignición (R2: minutos y segundos)." : "Esperando al AGC…" };
+    if (crew.ignitedAt === null) {
+      if (s.noun === "62") return { text: "Cuenta regresiva a la ignición (R2: minutos y segundos). A ×10 son unos 90 s." };
+      if (prog === "63") return { text: "El AGC calcula el momento de la ignición con el DSKY en blanco; la cuenta regresiva aparece enseguida." };
+      return { text: "Esperando al AGC…" };
+    }
     if (prog === "63") return { text: "<b>P63, frenado:</b> motor a fondo; el AGC baja el empuje cuando lo pide la guía." };
     if (prog === "64") return { text: "<b>P64, aproximación:</b> el AGC lleva el LM hacia el sitio. Puedes tomar el control con ROD (P66)." };
     if (prog === "65") return { text: "<b>P65:</b> aterrizaje vertical automático, nunca usado en una misión real." };
@@ -1742,13 +1746,14 @@ void main() {
   $("ropeLM").addEventListener("click", () => boot("LM"));
   $("ropeCM").addEventListener("click", () => boot("CM"));
   $("btnReset").addEventListener("click", () => boot(rope, inScenario));
-  $("btnPdi").addEventListener("click", () => boot("LM", true));
+  $("btnPdi").addEventListener("click", () => { boot("LM", true); setSpeed(10); });
   $("btnPause").addEventListener("click", (e) => { paused = !paused; e.currentTarget.textContent = paused ? "Continuar" : "Pausar"; });
-  $("btnFast").addEventListener("click", (e) => {
-    speed = speed === 1 ? 10 : 1;
-    e.currentTarget.textContent = speed === 1 ? "Acelerar ×10" : "Tiempo real";
+  function setSpeed(s) {
+    speed = s;
+    $("btnFast").textContent = speed === 1 ? "Acelerar ×10" : "Tiempo real";
     $("tSpd").textContent = speed.toFixed(2).replace(".", ",") + "×";
-  });
+  }
+  $("btnFast").addEventListener("click", () => setSpeed(speed === 1 ? 10 : 1));
 
   document.addEventListener("keydown", (e) => {
     if (e.target.closest && e.target.closest("input, textarea")) return;
