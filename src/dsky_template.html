@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="El software de vuelo original del Apollo 11 corriendo en tu navegador: Luminary099 y Comanche055 ejecutados ciclo a ciclo con un DSKY interactivo.">
+<meta name="theme-color" content="#14171a">
+<title>Apollo 11 DSKY</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2314171a'/%3E%3Cg fill='%238dff8f'%3E%3Cpath d='M11 5h3.5v10.5h-3.5zM11 16.5h3.5V27h-3.5zM18.5 5H22v10.5h-3.5zM18.5 16.5H22V27h-3.5z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: una consola de instrumento — el DSKY como objeto central, panel de misión a la derecha (apila en móvil). */
+:root {
+  color-scheme: dark;
+  --room: #14171a;          /* fondo de cabina */
+  --room-2: #1b1f23;
+  --housing: #8d9093;       /* gris del gabinete del DSKY */
+  --housing-dk: #6b6e71;
+  --housing-lt: #a9acaf;
+  --bezel: #232527;         /* marco negro de displays y teclas */
+  --key: #2c2e30;
+  --key-face: #3a3c3f;
+  --legend: #eceae4;        /* serigrafía blanca */
+  --el: #8dff8f;            /* electroluminiscente verde */
+  --el-dim: #13301a;
+  --el-glow: rgba(110, 255, 130, .55);
+  --lamp-off: #4a4c4e;
+  --lamp-white: #f4f2e8;
+  --lamp-amber: #ffb627;
+  --ink: #d9dcdf;           /* texto de la página */
+  --ink-2: #9aa1a8;
+  --ink-3: #6c737a;
+  --rule: #2c3238;
+  --accent: #ffb627;
+  --f-label: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --f-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+html, body { background: var(--room); color: var(--ink); }
+body {
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; border-bottom: 1px solid var(--rule); padding-bottom: 14px; }
+header.top h1 { margin: 0; font-family: var(--f-label); font-weight: 700; font-size: 30px; letter-spacing: .06em; text-transform: uppercase; text-wrap: balance; }
+header.top h1 span { color: var(--accent); }
+header.top p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 60ch; }
+
+.console { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 32px; align-items: start; justify-content: center; }
+@media (max-width: 940px) { .console { grid-template-columns: minmax(0, 1fr); justify-items: center; } .side { width: 100%; max-width: 560px; } }
+
+/* ───────── DSKY ───────── */
+.dsky {
+  width: 100%;
+  max-width: 560px;
+  background:
+    radial-gradient(120% 80% at 30% 0%, rgba(255,255,255,.14), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--housing-lt), var(--housing) 40%, var(--housing-dk));
+  border-radius: 10px;
+  padding: clamp(10px, 2.6vw, 18px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 -2px 0 rgba(0,0,0,.25) inset, 0 24px 60px rgba(0,0,0,.55);
+  position: relative;
+  display: grid;
+  gap: clamp(10px, 2.4vw, 16px);
+}
+.screw { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #c8cacc, #595b5d 70%); box-shadow: 0 1px 1px rgba(0,0,0,.5); }
+.screw::after { content: ""; position: absolute; left: 1px; right: 1px; top: 5px; height: 1px; background: #3a3c3e; transform: rotate(var(--r, 30deg)); }
+.screw.tl { top: 6px; left: 6px; } .screw.tr { top: 6px; right: 6px; --r: -20deg; } .screw.bl { bottom: 6px; left: 6px; --r: 70deg; } .screw.br { bottom: 6px; right: 6px; --r: 10deg; }
+
+.upper { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(8px, 2vw, 14px); }
+
+/* Panel de luces de precaución */
+.lamps { background: var(--bezel); border-radius: 6px; padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; box-shadow: 0 2px 0 rgba(255,255,255,.15), inset 0 2px 6px rgba(0,0,0,.6); }
+.lamp {
+  font-family: var(--f-label); font-weight: 600; font-size: clamp(9px, 2.1vw, 12px); letter-spacing: .05em; line-height: 1.05;
+  text-align: center; display: grid; place-items: center; min-height: clamp(28px, 6.2vw, 38px); padding: 2px;
+  border-radius: 2px; background: var(--lamp-off); color: #2b2d2f;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 -1px 2px rgba(0,0,0,.4);
+  transition: background .06s linear, color .06s linear, box-shadow .06s linear;
+}
+.lamp.empty { background: #3e4042; }
+.lamp.on.w { background: var(--lamp-white); color: #3a382f; box-shadow: 0 0 10px rgba(255,250,220,.55), inset 0 0 6px rgba(255,255,255,.8); }
+.lamp.on.a { background: var(--lamp-amber); color: #4a2c00; box-shadow: 0 0 12px rgba(255,170,30,.6), inset 0 0 6px rgba(255,230,160,.8); }
+
+/* Display EL */
+.el { background: #0b0d0c; border-radius: 6px; padding: clamp(6px, 1.6vw, 10px); box-shadow: 0 2px 0 rgba(255,255,255,.15), inset 0 2px 8px rgba(0,0,0,.9); display: grid; gap: clamp(3px, .8vw, 5px); }
+.el-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; }
+.el-cell { display: grid; justify-items: end; gap: 2px; }
+.el-cell.left { justify-items: start; }
+.tag { font-family: var(--f-label); font-weight: 600; font-size: clamp(8px, 1.8vw, 10px); letter-spacing: .08em; padding: 1px 4px; border-radius: 2px; background: var(--el); color: #0b0d0c; box-shadow: 0 0 6px var(--el-glow); }
+.compacty { width: clamp(30px, 7vw, 42px); aspect-ratio: 1; border-radius: 2px; background: var(--el-dim); display: grid; place-items: center; text-align: center; font-family: var(--f-label); font-weight: 700; font-size: clamp(7px, 1.6vw, 9px); line-height: 1.05; color: #0b0d0c; letter-spacing: .04em; transition: background .05s; }
+.compacty.on { background: var(--el); box-shadow: 0 0 10px var(--el-glow); }
+.digits { display: flex; gap: clamp(1px, .5vw, 3px); }
+.reg { border-top: 2px solid #1d3f24; padding-top: clamp(2px, .6vw, 4px); display: flex; justify-content: flex-end; }
+.reg.first { margin-top: 2px; }
+svg.d { width: clamp(15px, 3.6vw, 22px); height: auto; overflow: visible; }
+svg.d .s { fill: var(--el-dim); transition: fill .04s; }
+svg.d .s.on { fill: var(--el); filter: drop-shadow(0 0 2px var(--el-glow)); }
+svg.d.sign { width: clamp(13px, 3vw, 18px); }
+
+/* Teclado */
+.keys {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(6, clamp(21px, 5vw, 30px));
+  gap: clamp(4px, 1.1vw, 8px);
+  padding: clamp(4px, 1vw, 8px);
+}
+.key {
+  grid-row: span 2;
+  appearance: none; border: 0; cursor: pointer; padding: 0;
+  font-family: var(--f-label); font-weight: 700; color: var(--legend);
+  font-size: clamp(15px, 3.8vw, 24px); letter-spacing: .03em; line-height: 1;
+  background: linear-gradient(180deg, #47494c, var(--key-face) 45%, var(--key));
+  border-radius: 5px;
+  box-shadow: 0 3px 0 #141516, 0 4px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.14);
+  display: grid; place-items: center; text-align: center;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: transform .05s, box-shadow .05s;
+}
+.key.word { font-size: clamp(10px, 2.4vw, 14px); letter-spacing: .06em; }
+.key.word small { display: block; font-size: 1em; margin-top: -.15em; }
+.key:active, .key.down { transform: translateY(2px); box-shadow: 0 1px 0 #141516, 0 1px 3px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08); }
+.key:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.k-verb { grid-column: 1; grid-row: 2 / 4; } .k-noun { grid-column: 1; grid-row: 4 / 6; }
+.k-entr { grid-column: 7; grid-row: 2 / 4; } .k-rset { grid-column: 7; grid-row: 4 / 6; }
+
+.plate { display: flex; justify-content: space-between; align-items: center; font-family: var(--f-label); font-weight: 600; font-size: 11px; letter-spacing: .12em; color: #3c3e40; text-transform: uppercase; padding-inline: 6px; }
+
+/* ───────── Panel lateral ───────── */
+.side { display: grid; gap: 22px; min-width: 0; }
+.panel { display: grid; gap: 10px; }
+.panel h2 { margin: 0; font-family: var(--f-label); font-weight: 600; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { appearance: none; border: 0; background: var(--room-2); color: var(--ink-2); padding: 10px 12px; text-align: left; cursor: pointer; display: grid; gap: 2px; font: inherit; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button b { font-family: var(--f-label); font-weight: 700; font-size: 18px; letter-spacing: .04em; color: var(--ink); }
+.seg button span { font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: #262b30; box-shadow: inset 0 -2px 0 var(--accent); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.telemetry { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--rule); border-radius: 6px; }
+.telemetry div { padding: 8px 10px; display: grid; gap: 1px; min-width: 0; }
+.telemetry div + div { border-left: 1px solid var(--rule); }
+.telemetry dt { font-family: var(--f-label); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.telemetry dd { margin: 0; font-family: var(--f-mono); font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.macros { display: grid; gap: 0; border-top: 1px solid var(--rule); }
+.macro { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+.macro code { font-family: var(--f-mono); font-size: 13px; color: var(--el); overflow-wrap: anywhere; }
+.macro p { margin: 0; font-size: 14px; color: var(--ink-2); min-width: 0; }
+.macro p strong { color: var(--ink); font-weight: 600; }
+.run { appearance: none; border: 1px solid #3a4148; background: transparent; color: var(--ink); border-radius: 4px; padding: 5px 10px; font-family: var(--f-label); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.run:hover { border-color: var(--accent); color: var(--accent); }
+.run:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.run:disabled { opacity: .45; cursor: default; }
+@media (max-width: 480px) { .macro { grid-template-columns: minmax(0, 1fr) auto; } .macro code { grid-column: 1 / -1; } }
+
+.kbd { color: var(--ink-2); font-size: 13.5px; margin: 0; }
+kbd { font-family: var(--f-mono); font-size: 12px; border: 1px solid #3a4148; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; color: var(--ink); background: var(--room-2); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+footer { border-top: 1px solid var(--rule); padding-top: 14px; color: var(--ink-3); font-size: 13px; display: grid; gap: 4px; }
+footer p { margin: 0; max-width: 90ch; }
+footer a { color: var(--ink-2); }
+
+.err { color: #ff8a7a; font-family: var(--f-mono); font-size: 13px; }
+
+/* ───────── Nave simulada ───────── */
+.craft { display: grid; gap: 16px; border-top: 1px solid var(--rule); padding-top: 22px; }
+.craft-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 24px; }
+.craft-head h2 { margin: 0; font-family: var(--f-label); font-weight: 700; font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+.craft-head p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 62ch; }
+.craft-grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 940px) { .craft-grid { grid-template-columns: minmax(0, 1fr); max-width: 560px; margin-inline: auto; width: 100%; } }
+.craft.off .craft-grid { opacity: .35; pointer-events: none; }
+.craft-note { margin: 0; color: var(--accent); font-size: 14px; }
+
+.fdai-box { margin: 0; display: grid; gap: 8px; justify-items: center; }
+.fdai-box canvas { width: 100%; max-width: 300px; aspect-ratio: 1; display: block; }
+.fdai-box figcaption { font-family: var(--f-label); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+
+.jets { width: 100%; max-width: 300px; height: auto; display: block; margin-inline: auto; }
+.jets .body { fill: #23272b; stroke: #3a4148; }
+.jets .quad { fill: #30353a; stroke: #4a5259; }
+.jets .jet { fill: #3c4248; transition: fill .08s; }
+.jets .jet.on { fill: var(--accent); filter: drop-shadow(0 0 4px rgba(255,170,30,.8)); }
+.jets text { font-family: var(--f-label); font-size: 10px; letter-spacing: .08em; fill: var(--ink-3); }
+.jets .fwd { fill: var(--ink-2); }
+
+.seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg.three button { padding: 8px 10px; }
+.seg.three button b { font-size: 15px; }
+
+.pilot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; }
+.stick { width: 128px; aspect-ratio: 1; border-radius: 50%; position: relative; touch-action: none; cursor: grab;
+  background: radial-gradient(circle, #2a2f34 0 30%, #1d2125 31% 100%); border: 1px solid var(--rule);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.6); }
+.stick::before, .stick::after { content: ""; position: absolute; background: #2f363c; }
+.stick::before { left: 50%; top: 8px; bottom: 8px; width: 1px; }
+.stick::after { top: 50%; left: 8px; right: 8px; height: 1px; }
+.stick i { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; z-index: 1;
+  background: radial-gradient(circle at 35% 30%, #6b7177, #2c3135 75%); box-shadow: 0 3px 6px rgba(0,0,0,.6); }
+.stick.active { cursor: grabbing; border-color: var(--accent); }
+.stick:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.yaw { display: flex; gap: 8px; margin-top: 8px; }
+.yaw .run { flex: 1; }
+.pilot p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+@media (max-width: 480px) { .pilot { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+
+@media (prefers-reduced-motion: reduce) { .key, .lamp, svg.d .s, .jets .jet { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Apollo 11 <span>DSKY</span></h1>
+    <p>El software de vuelo original del AGC corriendo en tu navegador: la cuerda de memoria real, ejecutada ciclo a ciclo por el motor de Virtual AGC compilado a WebAssembly.</p>
+  </header>
+
+  <section class="console">
+    <div class="dsky" id="dsky" aria-label="Display and Keyboard del Apollo Guidance Computer">
+      <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+      <div class="upper">
+        <div class="lamps" id="lamps"></div>
+        <div class="el" id="el" aria-live="off"></div>
+      </div>
+      <div class="keys" id="keys"></div>
+      <div class="plate"><span id="plateLeft">Luminary 099 · LM-5 Eagle</span><span>MIT IL · 1969</span></div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <h2>Cuerda de memoria</h2>
+        <div class="seg" role="group" aria-label="Software de vuelo">
+          <button id="ropeLM" type="button" aria-pressed="true"><b>Luminary099</b><span>Módulo Lunar Eagle</span></button>
+          <button id="ropeCM" type="button" aria-pressed="false"><b>Comanche055</b><span>Módulo de Comando Columbia</span></button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Computador</h2>
+        <dl class="telemetry">
+          <div><dt>Tiempo AGC</dt><dd id="tAgc">00:00:00</dd></div>
+          <div><dt>Ciclos</dt><dd id="tCyc">0</dd></div>
+          <div><dt>Velocidad</dt><dd id="tSpd">1,00×</dd></div>
+        </dl>
+        <div class="actions">
+          <button class="run" id="btnPause" type="button">Pausar</button>
+          <button class="run" id="btnReset" type="button">Reiniciar AGC</button>
+          <button class="run" id="btnFast" type="button">Acelerar ×10</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Prueba estos comandos</h2>
+        <div class="macros" id="macros"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Teclado físico</h2>
+        <p class="kbd"><kbd>V</kbd> VERB · <kbd>N</kbd> NOUN · <kbd>0</kbd>–<kbd>9</kbd> · <kbd>Enter</kbd> ENTR · <kbd>C</kbd> CLR · <kbd>R</kbd> RSET · <kbd>K</kbd> KEY REL · <kbd>P</kbd> PRO (mantener) · <kbd>+</kbd> <kbd>-</kbd></p>
+        <p class="kbd">Palanca: <kbd>↑</kbd> <kbd>↓</kbd> cabeceo · <kbd>←</kbd> <kbd>→</kbd> alabeo · <kbd>A</kbd> <kbd>D</kbd> guiñada</p>
+      </div>
+      <p class="err" id="err" hidden></p>
+    </aside>
+  </section>
+
+  <section class="craft" id="craft" aria-labelledby="craftTitle">
+    <div class="craft-head">
+      <h2 id="craftTitle">Nave simulada · LM-5 Eagle</h2>
+      <p>El AGC no sabe que es una simulación: lee la plataforma inercial por sus contadores CDU y gira el LM encendiendo chorros RCS, igual que en 1969. La física de la nave corre en tu navegador.</p>
+    </div>
+    <p class="craft-note" id="craftNote" hidden>La nave simulada es el Módulo Lunar. Con Comanche055 el computador corre sin sensores.</p>
+    <div class="craft-grid">
+      <figure class="fdai-box">
+        <canvas id="fdai" width="300" height="300" role="img" aria-label="Indicador de actitud (FDAI)"></canvas>
+        <figcaption>FDAI · bola de actitud</figcaption>
+      </figure>
+
+      <div class="panel">
+        <h2>Chorros RCS</h2>
+        <svg class="jets" id="jets" viewBox="0 0 220 220" role="img" aria-label="Los 16 chorros RCS del LM vistos desde arriba"></svg>
+        <dl class="telemetry">
+          <div><dt>OGA (X)</dt><dd id="gO">0,00°</dd></div>
+          <div><dt>IGA (Y)</dt><dd id="gI">0,00°</dd></div>
+          <div><dt>MGA (Z)</dt><dd id="gM">0,00°</dd></div>
+        </dl>
+        <dl class="telemetry">
+          <div><dt>Guiñada</dt><dd id="wX">0,00 °/s</dd></div>
+          <div><dt>Cabeceo</dt><dd id="wY">0,00 °/s</dd></div>
+          <div><dt>Alabeo</dt><dd id="wZ">0,00 °/s</dd></div>
+        </dl>
+      </div>
+
+      <div class="panel">
+        <h2>Modo del PGNS</h2>
+        <div class="seg three" role="group" aria-label="Selector de modo de guiado">
+          <button type="button" data-mode="auto" aria-pressed="true"><b>AUTO</b><span>El AGC maniobra</span></button>
+          <button type="button" data-mode="hold" aria-pressed="false"><b>ATT HOLD</b><span>Manual</span></button>
+          <button type="button" data-mode="off" aria-pressed="false"><b>OFF</b><span>Sin autopiloto</span></button>
+        </div>
+        <h2>Palanca de mando</h2>
+        <div class="pilot">
+          <div>
+            <div class="stick" id="stick" tabindex="0" role="application" aria-label="Palanca de mando: cabeceo y alabeo"><i></i></div>
+            <div class="yaw">
+              <button class="run" type="button" id="yawL" aria-label="Guiñada negativa">◀ Y</button>
+              <button class="run" type="button" id="yawR" aria-label="Guiñada positiva">Y ▶</button>
+            </div>
+          </div>
+          <p>Arrastra la palanca y suéltala: el AGC gira el LM a la velocidad que pides y, al volver al centro, frena y mantiene la nueva actitud. Moverla pasa el selector a ATT HOLD, como hacía la tripulación.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Software de vuelo: MIT Instrumentation Laboratory (equipo de Margaret Hamilton), dominio público. Transcripción y emulador: <a href="https://github.com/virtualagc/virtualagc" target="_blank" rel="noopener">Virtual AGC</a> de Ron Burkey y colaboradores, licencia GPLv2. Los binarios ensamblados coinciden byte a byte con las cuerdas de vuelo.</p>
+    <p>Código fuente de este sitio (puente en C, simulador y plantilla), GPLv2: <a href="https://github.com/rvielma/apollo11-dsky" target="_blank" rel="noopener">github.com/rvielma/apollo11-dsky</a>.</p>
+    <p>Con Luminary099 el AGC vuela un LM simulado: plataforma inercial, actitud y chorros RCS. Todavía sin traslación, radar ni motor de descenso; los programas que los necesitan pueden encender PROG.</p>
+  </footer>
+</div>
+
+<script>
+%%SIM%%
+</script>
+<script>
+const WASM_B64 = "%%WASM%%";
+const ROPES = { LM: "%%LM%%", CM: "%%CM%%" };
+
+(function () {
+  "use strict";
+  const AGC_HZ = 1024000 / 12;           // ciclos de memoria por segundo (11,72 µs cada uno)
+  const KEY = { VERB: 17, NOUN: 31, ENTR: 28, CLR: 30, KREL: 25, RSET: 18, "+": 26, "-": 27, "0": 16 };
+  for (let d = 1; d <= 9; d++) KEY[String(d)] = d;
+  // Códigos de 5 bits del relé del DSKY → dígito
+  const DIG = { 0: null, 21: "0", 3: "1", 25: "2", 27: "3", 15: "4", 30: "5", 28: "6", 19: "7", 29: "8", 31: "9" };
+  const SEG = { "0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc", "7": "abc", "8": "abcdefg", "9": "abcfgd" };
+
+  const $ = (id) => document.getElementById(id);
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+  // ── Construcción del display EL ──
+  const svgNS = "http://www.w3.org/2000/svg";
+  function digitSVG(kind) {
+    const s = document.createElementNS(svgNS, "svg");
+    s.setAttribute("viewBox", "0 0 20 34");
+    s.setAttribute("class", "d" + (kind === "sign" ? " sign" : ""));
+    s.setAttribute("aria-hidden", "true");
+    const segs = kind === "sign"
+      ? { h: "M2 15.5h14l-1.5 2.5h-11z", v: "M7.5 9h3v15h-3z" }
+      : {
+          a: "M4 1h12l-2 3H6z", b: "M17 2l2 2v11l-2 1.5-2-1.5V5z", c: "M17 17.5l2 1.5v11l-2 2-2-3V19z",
+          d: "M6 30h8l2 3H4z", e: "M3 17.5l2 1.5v10l-2 3-2-2V19z", f: "M3 2l2 3v10l-2 1.5L1 15V4z", g: "M5 15.5h10l1.5 1.5L15 18.5H5L3.5 17z",
+        };
+    const map = {};
+    for (const k in segs) {
+      const p = document.createElementNS(svgNS, "path");
+      p.setAttribute("d", segs[k]); p.setAttribute("class", "s");
+      s.appendChild(p); map[k] = p;
+    }
+    s._segs = map;
+    return s;
+  }
+  function setDigit(svg, ch) {
+    const on = ch ? SEG[ch] : "";
+    for (const k in svg._segs) svg._segs[k].classList.toggle("on", on.includes(k));
+  }
+  function setSign(svg, plus, minus) {
+    const p = plus && !minus, m = minus && !plus;
+    svg._segs.h.classList.toggle("on", p || m);
+    svg._segs.v.classList.toggle("on", p);
+  }
+
+  const el = $("el");
+  const ui = {};
+  function group(n) { const g = document.createElement("div"); g.className = "digits"; const arr = []; for (let i = 0; i < n; i++) { const d = digitSVG(); g.appendChild(d); arr.push(d); } return [g, arr]; }
+  function cell(tag, n, left) { const c = document.createElement("div"); c.className = "el-cell" + (left ? " left" : ""); const t = document.createElement("span"); t.className = "tag"; t.textContent = tag; c.appendChild(t); const [g, arr] = group(n); c.appendChild(g); return [c, arr]; }
+  {
+    const r1 = document.createElement("div"); r1.className = "el-row";
+    const ca = document.createElement("div"); ca.className = "compacty"; ca.innerHTML = "COMP<br>ACTY"; ui.compActy = ca;
+    const cw = document.createElement("div"); cw.className = "el-cell left"; cw.appendChild(ca);
+    const [pc, pd] = cell("PROG", 2); ui.prog = pd;
+    r1.append(cw, pc);
+    const r2 = document.createElement("div"); r2.className = "el-row";
+    const [vc, vd] = cell("VERB", 2, true); const [nc, nd] = cell("NOUN", 2); ui.verb = vd; ui.noun = nd;
+    r2.append(vc, nc);
+    el.append(r1, r2);
+    ui.regs = [];
+    for (let r = 0; r < 3; r++) {
+      const row = document.createElement("div"); row.className = "reg" + (r === 0 ? " first" : "");
+      const g = document.createElement("div"); g.className = "digits";
+      const sg = digitSVG("sign"); g.appendChild(sg);
+      const ds = []; for (let i = 0; i < 5; i++) { const d = digitSVG(); g.appendChild(d); ds.push(d); }
+      row.appendChild(g); el.appendChild(row);
+      ui.regs.push({ sign: sg, d: ds });
+    }
+  }
+
+  // ── Panel de luces (disposición real del DSKY del Bloque II) ──
+  const LAMPS = [
+    ["uplink", "UPLINK<br>ACTY", "w"], ["temp", "TEMP", "a"],
+    ["noatt", "NO ATT", "w"], ["gimbal", "GIMBAL<br>LOCK", "a"],
+    ["stby", "STBY", "w"], ["prog", "PROG", "a"],
+    ["keyrel", "KEY REL", "w"], ["restart", "RESTART", "a"],
+    ["oprerr", "OPR ERR", "w"], ["tracker", "TRACKER", "a"],
+    ["prio", "PRIO DISP", "w"], ["alt", "ALT", "a"],
+    ["nodap", "NO DAP", "w"], ["vel", "VEL", "a"],
+  ];
+  ui.lamps = {};
+  for (const [id, label, col] of LAMPS) {
+    const d = document.createElement("div"); d.className = "lamp " + col; d.innerHTML = label; $("lamps").appendChild(d); ui.lamps[id] = d;
+  }
+
+  // ── Teclado (disposición real: VERB/NOUN y ENTR/RSET desplazadas media fila) ──
+  const KEYDEFS = [
+    ["VERB", "VERB", "k-verb word"], ["NOUN", "NOUN", "k-noun word"],
+    ["+", "+", "", 2, 1], ["7", "7", "", 3, 1], ["8", "8", "", 4, 1], ["9", "9", "", 5, 1], ["CLR", "CLR", "word", 6, 1],
+    ["-", "−", "", 2, 3], ["4", "4", "", 3, 3], ["5", "5", "", 4, 3], ["6", "6", "", 5, 3], ["PRO", "PRO", "word", 6, 3],
+    ["0", "0", "", 2, 5], ["1", "1", "", 3, 5], ["2", "2", "", 4, 5], ["3", "3", "", 5, 5], ["KREL", "KEY<small>REL</small>", "word", 6, 5],
+    ["ENTR", "ENTR", "k-entr word"], ["RSET", "RSET", "k-rset word"],
+  ];
+  const keyEls = {};
+  for (const [id, label, cls, col, row] of KEYDEFS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "key " + cls; b.innerHTML = label;
+    b.setAttribute("aria-label", id === "KREL" ? "KEY REL" : id === "-" ? "menos" : id);
+    if (col) { b.style.gridColumn = String(col); b.style.gridRow = row + " / " + (row + 2); }
+    if (id === "PRO") {
+      const down = (e) => { e.preventDefault(); agc && agc.agc_pro(1); b.classList.add("down"); };
+      const up = () => { agc && agc.agc_pro(0); b.classList.remove("down"); };
+      b.addEventListener("pointerdown", down); b.addEventListener("pointerup", up); b.addEventListener("pointerleave", up); b.addEventListener("pointercancel", up);
+    } else {
+      b.addEventListener("click", () => press(id));
+    }
+    $("keys").appendChild(b); keyEls[id] = b;
+  }
+
+  // ── Motor AGC (WebAssembly) ──
+  let agc = null, disp = null, sim = null;
+  let rope = "LM", paused = false, speed = 1, cycles = 0, lastT = 0, lastChange = -1, carry = 0, sliceAt = 0;
+  const SLICE = Math.round(AGC_HZ / 100);   // la nave avanza cada 10 ms de tiempo AGC
+  const queue = [];   // pulsaciones programadas por los macros
+
+  function wasiStub() {
+    return new Proxy({}, { get: (_, k) => (...a) => { if (k === "proc_exit") throw new Error("exit " + a[0]); return 8; } });
+  }
+  async function loadEngine() {
+    const { instance } = await WebAssembly.instantiate(b64(WASM_B64), { wasi_snapshot_preview1: wasiStub() });
+    agc = instance.exports;
+    if (agc._initialize) agc._initialize();
+    sim = LMSim(agc);
+  }
+  // Datos del autopiloto que la tripulación cargaba con V48 antes de separarse del CSM:
+  // N46 = 20102 (LM con etapa de descenso, sin acoplar, banda muerta 0,3°, maniobras a 2 °/s)
+  // y N47 = 33.300 lb de masa del LM. En N48 (trim del motor de descenso) se sale con V34.
+  const DAP_LOAD = "V48EV21E20102EPV21E+33300EPV34E";
+  function boot(which) {
+    rope = which;
+    const bytes = b64(ROPES[which]);
+    new Uint8Array(agc.memory.buffer, agc.rom_ptr(), bytes.length).set(bytes);
+    const rc = agc.agc_boot(bytes.length);
+    if (rc) throw new Error("No se pudo cargar la cuerda (" + rc + ")");
+    disp = new Int32Array(agc.memory.buffer, agc.disp_ptr(), 32);
+    cycles = 0; lastChange = -1; queue.length = 0; carry = 0; sliceAt = 0;
+    $("ropeLM").setAttribute("aria-pressed", which === "LM");
+    $("ropeCM").setAttribute("aria-pressed", which === "CM");
+    $("plateLeft").textContent = which === "LM" ? "Luminary 099 · LM-5 Eagle" : "Comanche 055 · CM-107 Columbia";
+    sim.reset();
+    const lm = which === "LM";
+    $("craft").classList.toggle("off", !lm);
+    $("craftNote").hidden = lm;
+    for (const b of lmButtons) b.disabled = !lm;
+    stick.p = stick.y = stick.r = 0; stick.keys.clear(); knob.style.transform = "";
+    // Secuencia de arranque. En el LM la IMU está encendida y el AGC dedica sus primeros
+    // segundos a ponerla en marcha; mientras tanto rechaza V37 (alarma 1520). Por eso primero
+    // se carga el autopiloto, luego P00 y al final los ángulos de la plataforma en pantalla.
+    // En el CM: P00 y el reloj del AGC.
+    schedule(["RSET"], 0.8);
+    if (lm) {
+      sim.powerUp();
+      setMode("auto");
+      schedule(seq(DAP_LOAD), 0.4);
+      schedule(seq("V37E00E"), 2);
+      schedule(seq("V16N20E"), 0.4);
+    } else {
+      schedule(seq("V37E00E"), 0.3);
+      schedule(seq("V16N65E"), 0.4);
+    }
+    drawFdai(true);
+  }
+
+  function seq(str) {
+    const out = [];
+    for (const c of str) out.push(c === "V" ? "VERB" : c === "N" ? "NOUN" : c === "E" ? "ENTR" : c === "R" ? "RSET" : c === "P" ? "PRO" : c === "W" ? "WAIT" : c);
+    return out;
+  }
+  // Programa teclas en tiempo AGC (no en tiempo de pared), así funcionan igual a cualquier velocidad.
+  // PRO se mantiene apretada medio segundo, como haría un dedo. WAIT da 1,5 s al AGC para
+  // cerrar una rutina, y una función se ejecuta en su turno (por ejemplo, mover el selector de modo).
+  function schedule(keys, delaySec) {
+    let at = (queue.length ? queue[queue.length - 1].at : cycles) + delaySec * AGC_HZ;
+    for (const k of keys) {
+      if (k === "WAIT") { at += 1.5 * AGC_HZ; continue; }
+      queue.push({ at, k });
+      if (typeof k === "function") { at += 0.05 * AGC_HZ; continue; }
+      if (k === "PRO") { at += 0.5 * AGC_HZ; queue.push({ at, k: "PRO_UP" }); at += 0.6 * AGC_HZ; }
+      else at += 0.22 * AGC_HZ;
+    }
+  }
+
+  function press(id) {
+    if (!agc) return;
+    if (typeof id === "function") { id(); return; }
+    if (id === "PRO") { agc.agc_pro(1); keyEls.PRO.classList.add("down"); return; }
+    if (id === "PRO_UP") { agc.agc_pro(0); keyEls.PRO.classList.remove("down"); return; }
+    if (id in KEY) agc.agc_key(KEY[id]);
+    const b = keyEls[id];
+    if (b) { b.classList.add("down"); setTimeout(() => b.classList.remove("down"), 110); }
+  }
+
+  // ── Render ──
+  const dg = (v, hi) => DIG[hi ? (v >> 5) & 31 : v & 31] ?? null;
+  function render() {
+    const d = disp;
+    const flash = (d[17] & 0o40) !== 0;        // VERB/NOUN parpadeando (fase apagada)
+    setDigit(ui.prog[0], dg(d[11], 1)); setDigit(ui.prog[1], dg(d[11], 0));
+    setDigit(ui.verb[0], flash ? null : dg(d[10], 1)); setDigit(ui.verb[1], flash ? null : dg(d[10], 0));
+    setDigit(ui.noun[0], flash ? null : dg(d[9], 1)); setDigit(ui.noun[1], flash ? null : dg(d[9], 0));
+    const b = (n) => (d[n] >> 10) & 1;
+    const R = [
+      { p: b(7), m: b(6), ch: [dg(d[8], 0), dg(d[7], 1), dg(d[7], 0), dg(d[6], 1), dg(d[6], 0)] },
+      { p: b(5), m: b(4), ch: [dg(d[5], 1), dg(d[5], 0), dg(d[4], 1), dg(d[4], 0), dg(d[3], 1)] },
+      { p: b(2), m: b(1), ch: [dg(d[3], 0), dg(d[2], 1), dg(d[2], 0), dg(d[1], 1), dg(d[1], 0)] },
+    ];
+    R.forEach((r, i) => { setSign(ui.regs[i].sign, r.p, r.m); r.ch.forEach((c, j) => setDigit(ui.regs[i].d[j], c)); });
+
+    const ch11 = d[16], ch163 = d[17], r12 = d[12];
+    ui.compActy.classList.toggle("on", (ch11 & 0o2) !== 0);
+    const L = ui.lamps, on = (k, v) => L[k].classList.toggle("on", !!v);
+    on("uplink", ch11 & 0o4);
+    on("temp", ch163 & 0o10);
+    on("keyrel", ch163 & 0o20);
+    on("oprerr", ch163 & 0o100);
+    on("restart", ch163 & 0o200);
+    on("stby", ch163 & 0o400);
+    on("prio", r12 & 0o1); on("nodap", r12 & 0o2); on("vel", r12 & 0o4); on("noatt", r12 & 0o10);
+    on("alt", r12 & 0o20); on("gimbal", r12 & 0o40); on("tracker", r12 & 0o200); on("prog", r12 & 0o400);
+  }
+
+  function fmtTime(sec) {
+    const s = Math.floor(sec), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return [h, m, s % 60].map((x) => String(x).padStart(2, "0")).join(":");
+  }
+
+  function frame(t) {
+    if (!lastT) lastT = t;
+    let dt = Math.min(0.1, (t - lastT) / 1000);
+    lastT = t;
+    if (!paused && agc) {
+      carry += dt * AGC_HZ * speed;
+      let todo = Math.floor(carry);
+      carry -= todo;
+      // Ejecutar hasta la próxima tecla programada o el fin del tramo de 10 ms, lo que llegue antes
+      while (todo > 0) {
+        while (queue.length && cycles >= queue[0].at) press(queue.shift().k);
+        const next = queue.length ? Math.ceil(queue[0].at - cycles) : Infinity;
+        const n = Math.max(1, Math.min(todo, next, SLICE - sliceAt));
+        agc.agc_run(n); cycles += n; todo -= n; sliceAt += n;
+        if (sliceAt >= SLICE) {
+          sliceAt = 0;
+          if (rope === "LM") sim.step(SLICE / AGC_HZ);
+        }
+      }
+      const ch = disp[18];
+      if (ch !== lastChange) { lastChange = ch; render(); }
+      $("tAgc").textContent = fmtTime(cycles / AGC_HZ);
+      $("tCyc").textContent = cycles.toLocaleString("es-CL");
+      if (rope === "LM") renderCraft();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ── FDAI: bola fija a la plataforma, vista desde el LM (centro = +Z adelante, arriba = +X) ──
+  const fdai = $("fdai"), fctx = fdai.getContext("2d");
+  const FR = 108, FC = 150;                      // radio y centro de la bola, en px CSS
+  const ballCv = document.createElement("canvas");
+  let lastM = null;
+  function sizeFdai() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    fdai.width = fdai.height = Math.round(300 * dpr);
+    const q = Math.min(dpr, 1.5);
+    ballCv.width = ballCv.height = Math.round(2 * FR * q);
+    lastM = null;
+  }
+  sizeFdai();
+  window.addEventListener("resize", sizeFdai);
+
+  // Pinta la esfera píxel a píxel: hemisferio "cielo" donde X de la plataforma es positivo,
+  // líneas cada 30° en elevación y azimut alrededor de X.
+  function paintBall(M) {
+    const D = ballCv.width, img = new ImageData(D, D), px = img.data;
+    const step = Math.PI / 6, lw = 1.6 / (D / 2);
+    for (let j = 0; j < D; j++) {
+      const v = (2 * j + 1) / D - 1;
+      for (let i = 0; i < D; i++) {
+        const u = (2 * i + 1) / D - 1, r2 = u * u + v * v;
+        if (r2 > 1) continue;
+        const bx = -v, by = u, bz = Math.sqrt(1 - r2);
+        const sx = M[0][0] * bx + M[0][1] * by + M[0][2] * bz;
+        const sy = M[1][0] * bx + M[1][1] * by + M[1][2] * bz;
+        const sz = M[2][0] * bx + M[2][1] * by + M[2][2] * bz;
+        const sky = sx > 0;
+        const el = Math.asin(Math.max(-1, Math.min(1, sx))), az = Math.atan2(sy, sz);
+        const dEl = Math.abs(el - step * Math.round(el / step));
+        const dAz = Math.abs(az - step * Math.round(az / step)) * Math.cos(el);
+        const k = lw / Math.max(bz, 0.25);
+        const horizon = Math.abs(el) < k * 1.6;
+        let line = Math.max(0, 1 - Math.min(dEl, Math.abs(el) > 1.45 ? 1 : dAz) / k);
+        if (horizon) line = 1;
+        const shade = 0.62 + 0.38 * bz;
+        let c = sky ? [205, 200, 186] : [44, 46, 49];
+        const lc = horizon ? [255, 182, 39] : sky ? [70, 72, 76] : [170, 174, 178];
+        c = c.map((x, n) => (x * (1 - line) + lc[n] * line) * shade);
+        const o = (j * D + i) * 4;
+        px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2];
+        px[o + 3] = Math.min(255, (1 - Math.sqrt(r2)) * D * 255);
+      }
+    }
+    ballCv.getContext("2d").putImageData(img, 0, 0);
+  }
+
+  const RATE_FULL = 10 * Math.PI / 180;          // fondo de escala de los indicadores de velocidad
+  function drawFdai(force) {
+    const M = sim.gimbalMatrix, dpr = fdai.width / 300;
+    const changed = force || !lastM || M.some((r, i) => r.some((x, j) => Math.abs(x - lastM[i][j]) > 2e-4));
+    if (changed) { paintBall(M); lastM = M.map((r) => r.slice()); }
+    const g = fctx;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, 300, 300);
+    // Bisel
+    g.fillStyle = "#0e1012"; g.beginPath(); g.arc(FC, FC, FR + 34, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = "#2c3238"; g.lineWidth = 1; g.stroke();
+    g.drawImage(ballCv, FC - FR, FC - FR, 2 * FR, 2 * FR);
+    // Etiquetas de azimut sobre el ecuador (03 = 30°, como en la bola real)
+    g.font = "600 11px 'Barlow Condensed', sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    for (let a = 0; a < 360; a += 30) {
+      const s = [0, Math.sin(a * Math.PI / 180), Math.cos(a * Math.PI / 180)];
+      const b = [0, 1, 2].map((k) => M[0][k] * s[0] + M[1][k] * s[1] + M[2][k] * s[2]);
+      if (b[2] < 0.3) continue;
+      g.fillStyle = "#14171a";
+      g.fillText(String(a / 10).padStart(2, "0"), FC + b[1] * FR, FC - b[0] * FR - 8);
+    }
+    // Agujas de error (lo que el AGC manda a los contadores de error de los CDU)
+    const nd = sim.needles, ns = (FR * 0.75) / 384;
+    g.strokeStyle = "#ffb627"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(FC + nd[0] * ns, FC + 14); g.lineTo(FC + nd[0] * ns, FC + FR - 12); g.stroke();
+    g.beginPath(); g.moveTo(FC + 14, FC + nd[1] * ns); g.lineTo(FC + FR - 12, FC + nd[1] * ns); g.stroke();
+    g.beginPath(); g.moveTo(FC - nd[2] * ns, FC - 14); g.lineTo(FC - nd[2] * ns, FC - FR + 12); g.stroke();
+    // Símbolo del LM fijo al centro
+    g.strokeStyle = "#ffb627"; g.lineWidth = 3; g.lineCap = "round";
+    g.beginPath(); g.moveTo(FC - 30, FC); g.lineTo(FC - 10, FC); g.lineTo(FC, FC + 8); g.lineTo(FC + 10, FC); g.lineTo(FC + 30, FC); g.stroke();
+    // Indicadores de velocidad: alabeo arriba, cabeceo a la derecha, guiñada abajo (±10 °/s)
+    const w = sim.rates, rs = (x) => Math.max(-1, Math.min(1, x / RATE_FULL)) * 70;
+    g.lineWidth = 1; g.strokeStyle = "#3a4148"; g.fillStyle = "#9aa1a8";
+    const scale = (horiz, fixed) => {
+      for (let t = -70; t <= 70; t += 14) {
+        g.beginPath();
+        if (horiz) { g.moveTo(FC + t, fixed - 4); g.lineTo(FC + t, fixed + 4); } else { g.moveTo(fixed - 4, FC + t); g.lineTo(fixed + 4, FC + t); }
+        g.stroke();
+      }
+    };
+    scale(true, 18); scale(false, 282); scale(true, 282);
+    const tri = (x, y, dx, dy) => { g.beginPath(); g.moveTo(x, y); g.lineTo(x - dy * 6 - dx * 9, y + dx * 6 - dy * 9); g.lineTo(x + dy * 6 - dx * 9, y - dx * 6 - dy * 9); g.closePath(); g.fill(); };
+    g.fillStyle = "#d9dcdf";
+    tri(FC + rs(w[2]), 22, 0, 1);
+    tri(278, FC - rs(w[1]), -1, 0);
+    tri(FC + rs(w[0]), 278, 0, -1);
+    g.font = "600 10px 'Barlow Condensed', sans-serif"; g.fillStyle = "#6c737a";
+    g.fillText("ALABEO", FC, 8); g.fillText("GUIÑADA", FC, 294);
+    g.save(); g.translate(294, FC); g.rotate(Math.PI / 2); g.fillText("CABECEO", 0, 0); g.restore();
+    if (sim.locked) {
+      g.font = "700 18px 'Barlow Condensed', sans-serif"; g.fillStyle = "#ff8a7a";
+      g.fillText("GIMBAL LOCK", FC, FC - 34);
+    }
+  }
+
+  // ── Chorros RCS: vista superior, adelante (+Z) hacia arriba, derecha (+Y) a la derecha ──
+  const jetEls = {}, jetSeen = {};
+  {
+    const svg = $("jets"), NS = svgNS;
+    const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+    el("polygon", { class: "body", points: "88,40 132,40 160,68 160,152 132,180 88,180 60,152 60,68" });
+    el("text", { x: 110, y: 112, "text-anchor": "middle", class: "fwd" }).textContent = "LM";
+    el("path", { d: "M110 30 l-6 9 h12z", class: "jet fwd" });
+    el("text", { x: 110, y: 14, "text-anchor": "middle" }).textContent = "ADELANTE";
+    // Cuadrante: [nombre, x, y, lateral (L/R), sentido x, longitudinal (F/A), sentido y]
+    const QUADS = [["Q1", 50, 50, "L", -1, "F", -1], ["Q4", 170, 50, "R", 1, "F", -1],
+                   ["Q2", 50, 170, "L", -1, "A", 1], ["Q3", 170, 170, "R", 1, "A", 1]];
+    for (const [q, x, y, lat, sx, lon, sy] of QUADS) {
+      el("circle", { class: "quad", cx: x, cy: y, r: 15 });
+      const add = (name, d) => { const p = el("path", { class: "jet", d }); el("title", {}, p).textContent = name; jetEls[name] = p; };
+      add(q + "U", `M${x - 11} ${y + 4} l5 -9 l5 9z`);
+      add(q + "D", `M${x + 1} ${y - 5} l5 9 l5 -9z`);
+      add(q + lat, `M${x + sx * 16} ${y - 5} l${sx * 16} 5 l${-sx * 16} 5z`);
+      add(q + lon, `M${x - 5} ${y + sy * 16} l5 ${sy * 16} l5 ${-sy * 16}z`);
+      el("text", { x: x + sx * 2, y: y + (sy < 0 ? 30 : -24), "text-anchor": "middle" }).textContent = q;
+    }
+  }
+
+  const fmtDeg = (r) => {
+    const d = Math.round((r * 180 / Math.PI) * 100) / 100;
+    return (((d % 360) + 360) % 360).toFixed(2).replace(".", ",") + "°";
+  };
+  const fmtRate = (r) => (r * 180 / Math.PI).toFixed(2).replace(".", ",").replace(/^-0,00$/, "0,00") + " °/s";
+  let lastReadout = 0;
+  function renderCraft() {
+    drawFdai(false);
+    const now = performance.now();
+    for (const [name, f] of sim.jets) {
+      if (f > 0) jetSeen[name] = now;
+      jetEls[name].classList.toggle("on", now - (jetSeen[name] || -1e9) < 120);
+    }
+    if (now - lastReadout > 100) {
+      lastReadout = now;
+      const g = sim.gimbals, w = sim.rates;
+      $("gO").textContent = fmtDeg(g[0]); $("gI").textContent = fmtDeg(g[1]); $("gM").textContent = fmtDeg(g[2]);
+      $("wX").textContent = fmtRate(w[0]); $("wY").textContent = fmtRate(w[1]); $("wZ").textContent = fmtRate(w[2]);
+    }
+  }
+
+  // ── Selector de modo del PGNS y palanca de mando ──
+  let mode = "auto";
+  const modeBtns = [...document.querySelectorAll("[data-mode]")];
+  function setMode(m) {
+    mode = m;
+    sim.setMode(m);
+    for (const b of modeBtns) b.setAttribute("aria-pressed", b.dataset.mode === m);
+  }
+  for (const b of modeBtns) b.addEventListener("click", () => setMode(b.dataset.mode));
+
+  const stick = { p: 0, y: 0, r: 0, keys: new Set() };
+  const stickEl = $("stick"), knob = stickEl.querySelector("i");
+  function applyStick() {
+    if (rope !== "LM" || !agc) return;
+    if ((stick.p || stick.y || stick.r) && mode === "auto") setMode("hold");
+    sim.setStick(stick.p, stick.y, stick.r);
+    const travel = stickEl.clientWidth / 2 - 17;
+    knob.style.transform = `translate(${(stick.r / 42) * travel}px, ${(stick.p / 42) * travel}px)`;
+  }
+  function stickFromPointer(e) {
+    const b = stickEl.getBoundingClientRect(), rad = b.width / 2 - 17;
+    let x = (e.clientX - b.left - b.width / 2) / rad, y = (e.clientY - b.top - b.height / 2) / rad;
+    const l = Math.hypot(x, y);
+    if (l > 1) { x /= l; y /= l; }
+    stick.r = x * 42; stick.p = y * 42;           // empujar adelante (arriba) = cabeceo negativo
+    applyStick();
+  }
+  stickEl.addEventListener("pointerdown", (e) => { stickEl.setPointerCapture(e.pointerId); stickEl.classList.add("active"); stickFromPointer(e); });
+  stickEl.addEventListener("pointermove", (e) => { if (stickEl.hasPointerCapture(e.pointerId)) stickFromPointer(e); });
+  const center = () => { stick.p = stick.r = 0; stickEl.classList.remove("active"); applyStick(); };
+  stickEl.addEventListener("pointerup", center);
+  stickEl.addEventListener("pointercancel", center);
+  for (const [id, v] of [["yawL", -42], ["yawR", 42]]) {
+    const b = $(id);
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); stick.y = v; applyStick(); });
+    for (const ev of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(ev, () => { if (stick.y === v) { stick.y = 0; applyStick(); } });
+  }
+  // Teclado: flechas para cabeceo y alabeo, A/D para guiñada
+  const STICK_KEYS = { ArrowUp: ["p", -42], ArrowDown: ["p", 42], ArrowLeft: ["r", -42], ArrowRight: ["r", 42], a: ["y", -42], d: ["y", 42] };
+  function stickKeys() {
+    stick.p = stick.r = stick.y = 0;
+    for (const k of stick.keys) { const [ax, v] = STICK_KEYS[k]; stick[ax] = v; }
+    applyStick();
+  }
+
+  // ── Macros ──
+  // [lo que se teclea, secuencia, explicación, solo LM]
+  const MACROS = [
+    ["V16 N20 ENTR", "V16N20E", "<strong>Ángulos de la plataforma</strong> (gimbals de la IMU) en vivo. Mueve la palanca y míralos cambiar.", true],
+    ["V49 ENTR · 30 20 10 · PRO PRO", "V49EV25E+03000E+02000E+01000EPP", "<strong>Maniobra automática</strong> hasta 30°, 20° y 10°: el AGC calcula la rotación y dispara los chorros. Pasa el modo a AUTO.", true],
+    ["V48 ENTR · 20102 · 33300", DAP_LOAD, "<strong>Cargar el autopiloto</strong> con la configuración y la masa del LM. Ya se hace al arrancar.", true],
+    ["V35 ENTR", "V35E", "<strong>Prueba de lámparas.</strong> Enciende todos los segmentos y luces. Luego presiona RSET.", false],
+    ["V16 N65 ENTR", "V16N65E", "<strong>Reloj del AGC</strong> en horas, minutos y centésimas de segundo, actualizándose.", false],
+    ["V37 ENTR 00 ENTR", "V37E00E", "<strong>Cambiar a P00</strong>, el programa de espera del computador.", false],
+    ["V05 N09 ENTR", "V05N09E", "<strong>Códigos de alarma</strong> registrados, como el 1202 del alunizaje.", false],
+    ["V69 ENTR", "V69E", "<strong>Forzar un reinicio</strong>: enciende RESTART como en una caída de energía.", false],
+  ];
+  const mBox = $("macros"), lmButtons = [];
+  for (const [label, code, text, lmOnly] of MACROS) {
+    const row = document.createElement("div"); row.className = "macro";
+    const c = document.createElement("code"); c.textContent = label;
+    const p = document.createElement("p"); p.innerHTML = text;
+    const b = document.createElement("button"); b.type = "button"; b.className = "run"; b.textContent = "Ejecutar";
+    b.addEventListener("click", () => {
+      queue.length = 0;
+      press("PRO_UP");                              // por si un macro anterior dejó PRO apretada
+      const s = vnState(), keys = [];
+      if (code.startsWith("V49") && s.verb === "06" && s.noun === "18" && !s.flash) {
+        // Maniobra en curso: el AGC no acepta otro V49 hasta cerrarla. Como la tripulación,
+        // se pasa a ATT HOLD (el AGC la aborta y pide respuesta con V50 N18) y se termina con V34.
+        keys.push(() => setMode("hold"), "WAIT", "WAIT", ...seq("V34EW"));
+      } else if (s.flash) {
+        keys.push(...seq("V34EW"));                 // el AGC espera respuesta: se cierra esa rutina
+      }
+      if (code.startsWith("V49")) keys.push(() => setMode("auto"));
+      schedule(keys.concat(seq(code)), 0.05);
+    });
+    if (lmOnly) lmButtons.push(b);
+    row.append(c, p, b); mBox.appendChild(row);
+  }
+
+  // Verbo, sustantivo y parpadeo actuales del DSKY
+  function vnState() {
+    const d = disp, two = (v) => (dg(v, 1) ?? " ") + (dg(v, 0) ?? " ");
+    return { verb: two(d[10]), noun: two(d[9]), flash: (d[16] & 0o40) !== 0 };
+  }
+
+  // ── Controles ──
+  $("ropeLM").addEventListener("click", () => boot("LM"));
+  $("ropeCM").addEventListener("click", () => boot("CM"));
+  $("btnReset").addEventListener("click", () => boot(rope));
+  $("btnPause").addEventListener("click", (e) => { paused = !paused; e.currentTarget.textContent = paused ? "Continuar" : "Pausar"; });
+  $("btnFast").addEventListener("click", (e) => {
+    speed = speed === 1 ? 10 : 1;
+    e.currentTarget.textContent = speed === 1 ? "Acelerar ×10" : "Tiempo real";
+    $("tSpd").textContent = speed.toFixed(2).replace(".", ",") + "×";
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.target.closest && e.target.closest("input, textarea")) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    let id = null;
+    if (/^[0-9]$/.test(k)) id = k;
+    else if (k === "v" || k === "V") id = "VERB";
+    else if (k === "n" || k === "N") id = "NOUN";
+    else if (k === "Enter") id = "ENTR";
+    else if (k === "c" || k === "C") id = "CLR";
+    else if (k === "r" || k === "R") id = "RSET";
+    else if (k === "k" || k === "K") id = "KREL";
+    else if (k === "+" || k === "-") id = k;
+    else if ((k === "p" || k === "P") && !e.repeat) { agc && agc.agc_pro(1); keyEls.PRO.classList.add("down"); e.preventDefault(); return; }
+    else if ((k in STICK_KEYS || k.toLowerCase() in STICK_KEYS) && rope === "LM") {
+      e.preventDefault();
+      if (!e.repeat) { stick.keys.add(k in STICK_KEYS ? k : k.toLowerCase()); stickKeys(); }
+      return;
+    }
+    if (id) {
+      if (k === "Enter" && e.target.closest && e.target.closest("button")) e.preventDefault();
+      e.preventDefault(); press(id);
+    }
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "p" || e.key === "P") { agc && agc.agc_pro(0); keyEls.PRO.classList.remove("down"); }
+    const sk = e.key in STICK_KEYS ? e.key : e.key.toLowerCase();
+    if (stick.keys.delete(sk)) stickKeys();
+  });
+  window.addEventListener("blur", () => { if (stick.keys.size) { stick.keys.clear(); stickKeys(); } });
+
+  // ── Arranque ──
+  loadEngine().then(() => { boot("LM"); requestAnimationFrame(frame); }).catch((e) => {
+    const box = $("err"); box.hidden = false; box.textContent = "No se pudo iniciar el AGC: " + e.message;
+  });
+})();
+</script>
+
+</body>
+</html>

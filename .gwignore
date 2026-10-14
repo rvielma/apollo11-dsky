@@ -1,0 +1,47 @@
+# GitWeave ignore file — glob patterns, one per line. Comments start with #.
+# Edit freely: patterns take effect on the next `gw status` or `gw record`.
+
+# Detected: no recognized project type
+
+# Agent context (CLAUDE.md, AGENTS.md, .claude, .cursor, …) is ignored
+# by default. To version one, re-include it: !CLAUDE.md
+
+# IDE / editors
+.idea
+.idea/**
+.vscode
+.vscode/**
+.fleet
+.fleet/**
+*.swp
+*.swo
+*~
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/**
+
+# Generic build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Logs
+*.log
+logs/**
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# Copia que genera mt up al desplegar
+deploy/dist
+deploy/dist/**

@@ -1,0 +1,23 @@
+# Apollo 11 DSKY en Mentat: Hull con serve:static.
+#
+# Es un solo index.html (wasm y cuerdas embebidas), no hay build real: se copia
+# a deploy/dist. live: true reemplaza el contenido sin bajar el servicio.
+#
+#   mt --server https://www.getmentat.run up deploy/sitio.yaml   # *.getmentat.run / *.gitweave.run
+#   mt --server https://www.falpti.org     up deploy/sitio.yaml   # *.falpti.org
+name: apollo11-dsky
+domain: apollo11.gitweave.run
+replicas: 1
+build:
+  cwd: ../
+  cmd: >-
+    rm -rf deploy/dist && mkdir -p deploy/dist && cp index.html deploy/dist/
+  output: deploy/dist
+runtime:
+  serve: static
+  live: true
+  port: 3031
+  memory: 64M
+  cpu: 0.5
+  pids: 16
+health: /
