@@ -111,8 +111,9 @@ EXPORT(agc_inc) void agc_inc(int counter, int type) { UnprogrammedIncrement(&Sta
 EXPORT(agc_chan) int agc_chan(int ch) { return State.InputChannel[ch & 0377]; }
 EXPORT(agc_set_chan) void agc_set_chan(int ch, int v) { State.InputChannel[ch & 0377] = v & 077777; }
 
-/* Lectura de la memoria borrable, para depurar y para los tests. */
+/* Memoria borrable: lectura (depurar, tests) y escritura (cargar un volcado de misión). */
 EXPORT(agc_erasable) int agc_erasable(int addr) { return State.Erasable[(addr >> 8) & 7][addr & 0377]; }
+EXPORT(agc_set_erasable) void agc_set_erasable(int addr, int v) { State.Erasable[(addr >> 8) & 7][addr & 0377] = v & 077777; }
 
 /* Tecla del DSKY: código de 5 bits al canal 015 + KEYRUPT1. */
 EXPORT(agc_key) void agc_key(int code) {

@@ -116,6 +116,15 @@ function LMSim(agc) {
     S = ortho(mul(B, tr(gimbalsToM(g[0], g[1], g[2]))));
   }
 
+  // Tras cargar un volcado de memoria: los contadores CDU del AGC ya traen los ángulos de gimbal.
+  // La plataforma se orienta para que coincidan y se dan por entregados, sin pulsos de más.
+  function syncFromCdu() {
+    // Los CDU cuentan en módulo 2^15: 0..32767 recorre la vuelta completa.
+    const counts = [0o32, 0o33, 0o34].map((a) => agc.agc_erasable(a) & 0o77777);
+    setGimbals(counts.map((c) => c * CDU_UNIT));
+    fed = counts.slice();
+  }
+
   // Avanza dt segundos de nave. Lee lo que el AGC ordenó desde el último paso.
   function step(dt) {
     const d = ioView();
@@ -174,7 +183,7 @@ function LMSim(agc) {
   }
 
   return {
-    reset, powerUp, step, setMode, setStick,
+    reset, powerUp, step, setMode, setStick, syncFromCdu,
     get gimbals() { return gimbals(); },
     // Ejes del cuerpo expresados en la plataforma (columnas): lo que dibuja la FDAI.
     get gimbalMatrix() { return mul(tr(S), B); },

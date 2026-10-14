@@ -75,6 +75,7 @@ Carga el wasm y Luminary099 desde `index.html`, corre unos minutos de tiempo AGC
 
 - Software de vuelo del AGC (Luminary099, Comanche055): MIT Instrumentation Laboratory, dominio público.
 - Motor yaAGC: Virtual AGC (Ron Burkey y colaboradores), GPLv2. https://github.com/virtualagc/virtualagc
+- Estado del computador del LM 15 minutos antes del descenso (`src/escenario_pdi.json`): extraído del escenario "Apollo 11 - 10 - PDI T-15m" de NASSP (Project Apollo para Orbiter), GPLv2. https://github.com/orbiternassp/NASSP. Se regenera con `python3 src/extraer_escenario.py <escenario.scn>`.
 - `src/agc_web.c` se enlaza con yaAGC, así que se distribuye también bajo GPLv2, igual que el resto de `src/`. El código está en https://github.com/rvielma/apollo11-dsky y el pie del sitio lo enlaza.
 
 ## Detalle técnico

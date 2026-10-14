@@ -166,6 +166,8 @@ svg.d.sign { width: clamp(13px, 3vw, 18px); }
 @media (max-width: 480px) { .macro { grid-template-columns: minmax(0, 1fr) auto; } .macro code { grid-column: 1 / -1; } }
 
 .kbd { color: var(--ink-2); font-size: 13.5px; margin: 0; }
+.kbd code { font-family: var(--f-mono); font-size: 12.5px; color: var(--el); }
+.wip { font-size: 11px; letter-spacing: .08em; color: var(--accent); border: 1px solid currentColor; border-radius: 3px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
 kbd { font-family: var(--f-mono); font-size: 12px; border: 1px solid #3a4148; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; color: var(--ink); background: var(--room-2); }
 
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -264,6 +266,12 @@ footer a { color: var(--ink-2); }
       </div>
 
       <div class="panel">
+        <h2>Descenso del Apollo 11 <span class="wip">en construcción</span></h2>
+        <p class="kbd">Carga el computador del Eagle tal como estaba 15 minutos antes del inicio del descenso (memoria reconstruida por el proyecto NASSP) y deja que Luminary099 retome P63. Responde como la tripulación: <kbd>ENTR</kbd> para saltar la alineación fina, <kbd>ENTR</kbd> para dar por buena la actitud y mira la cuenta regresiva <code>V06 N62</code> (usa Acelerar ×10). A los 5 s pide <code>V99 N62</code>: autoriza con <kbd>P</kbd> (PRO) y el AGC enciende el motor y muestra <code>N63</code>: velocidad, velocidad vertical y altura, unos 48.000 pies. El motor de descenso aún no está simulado, así que segundos después el AGC detecta que no hay empuje y pide <code>V97</code>. Si no autorizas, da la alarma 1406.</p>
+        <div class="actions"><button class="run" id="btnPdi" type="button">Cargar PDI −15 min</button></div>
+      </div>
+
+      <div class="panel">
         <h2>Prueba estos comandos</h2>
         <div class="macros" id="macros"></div>
       </div>
@@ -339,6 +347,7 @@ footer a { color: var(--ink-2); }
 <script>
 const WASM_B64 = "%%WASM%%";
 const ROPES = { LM: "%%LM%%", CM: "%%CM%%" };
+const ESCENARIO = %%ESCENARIO%%;
 
 (function () {
   "use strict";
@@ -467,8 +476,13 @@ const ROPES = { LM: "%%LM%%", CM: "%%CM%%" };
   // N46 = 20102 (LM con etapa de descenso, sin acoplar, banda muerta 0,3°, maniobras a 2 °/s)
   // y N47 = 33.300 lb de masa del LM. En N48 (trim del motor de descenso) se sale con V34.
   const DAP_LOAD = "V48EV21E20102EPV21E+33300EPV34E";
-  function boot(which) {
+  // scenario: carga el estado del AGC del LM 15 min antes del descenso (memoria borrable y
+  // canales de NASSP) en vez de arrancar en frío. El AGC parte en 04000 como tras un corte de
+  // energía: conserva la memoria y su protección de reinicio retoma P63 donde estaba.
+  let inScenario = false;
+  function boot(which, scenario = false) {
     rope = which;
+    inScenario = scenario;
     const bytes = b64(ROPES[which]);
     new Uint8Array(agc.memory.buffer, agc.rom_ptr(), bytes.length).set(bytes);
     const rc = agc.agc_boot(bytes.length);
@@ -488,6 +502,16 @@ const ROPES = { LM: "%%LM%%", CM: "%%CM%%" };
     // segundos a ponerla en marcha; mientras tanto rechaza V37 (alarma 1520). Por eso primero
     // se carga el autopiloto, luego P00 y al final los ángulos de la plataforma en pantalla.
     // En el CM: P00 y el reloj del AGC.
+    if (scenario) {
+      const mem = new Uint16Array(b64(ESCENARIO.memoria).buffer);
+      for (let a = 0o10; a < 0o4000; a++) agc.agc_set_erasable(a, mem[a]);
+      for (const ch in ESCENARIO.canales) agc.agc_set_chan(parseInt(ch, 8), ESCENARIO.canales[ch]);
+      agc.agc_set_chan(0o33, agc.agc_chan(0o33) & ~0o40);   // antena del radar en posición 1
+      sim.syncFromCdu();
+      setMode("auto");
+      drawFdai(true);
+      return;
+    }
     schedule(["RSET"], 0.8);
     if (lm) {
       sim.powerUp();
@@ -831,7 +855,8 @@ const ROPES = { LM: "%%LM%%", CM: "%%CM%%" };
   // ── Controles ──
   $("ropeLM").addEventListener("click", () => boot("LM"));
   $("ropeCM").addEventListener("click", () => boot("CM"));
-  $("btnReset").addEventListener("click", () => boot(rope));
+  $("btnReset").addEventListener("click", () => boot(rope, inScenario));
+  $("btnPdi").addEventListener("click", () => boot("LM", true));
   $("btnPause").addEventListener("click", (e) => { paused = !paused; e.currentTarget.textContent = paused ? "Continuar" : "Pausar"; });
   $("btnFast").addEventListener("click", (e) => {
     speed = speed === 1 ? 10 : 1;

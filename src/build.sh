@@ -32,6 +32,7 @@ w = sys.argv[1]
 b = lambda f: base64.b64encode(open(f"{w}/{f}", "rb").read()).decode()
 t = open("dsky_template.html").read()
 t = t.replace("%%SIM%%", open("lm_sim.js").read().strip())
+t = t.replace("%%ESCENARIO%%", open("escenario_pdi.json").read().strip())
 t = t.replace("%%WASM%%", b("agc.wasm")).replace("%%LM%%", b("Luminary099.bin")).replace("%%CM%%", b("Comanche055.bin"))
 open("../index.html", "w").write(t)
 EOF
