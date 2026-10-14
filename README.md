@@ -19,7 +19,7 @@ src/prueba_nave.js      Prueba en Node: IMU, autopiloto, palanca y el descenso c
 src/escenario_pdi.json  Memoria del computador del LM 15 min antes del PDI (de NASSP).
 src/extraer_escenario.py Regenera escenario_pdi.json desde el .scn de NASSP.
 src/recortar_audio.sh   Regenera audio/*.mp3 (clips de NASA) desde el ALSJ.
-audio/                  Clips de audio de la misión (no versionados en gw).
+audio/                  Clips de audio de la misión (NASA, dominio público).
 src/build.sh            Clona Virtual AGC, ensambla las cuerdas, compila a wasm y regenera index.html.
 src/VIRTUALAGC_COMMIT   Commit exacto de Virtual AGC usado.
 ```
@@ -123,6 +123,6 @@ El puente implementa la API de canales que espera el motor (`ChannelOutput`, `Ch
 
 ### Sonido
 
-Botón "Sonido": teclas del DSKY, chorros RCS, rumor del motor de descenso según el empuje y un tono de alarma, sintetizados con Web Audio. Clips reales de la misión en `audio/*.mp3`, disparados por eventos: autorización del PDI, 1202 (y al terminar, "we're go on that alarm"), 1201, "contact light" y "The Eagle has landed". Son tramos continuos del canal de Asuntos Públicos de NASA (Johnson Space Center, Audio Control Room) publicados en el Apollo Lunar Surface Journal; dominio público. `src/recortar_audio.sh` los regenera desde las grabaciones originales, con sus tiempos (gw no versiona los MP3).
+Botón "Sonido": teclas del DSKY, chorros RCS, rumor del motor de descenso según el empuje y un tono de alarma, sintetizados con Web Audio. Clips reales de la misión en `audio/*.mp3`, disparados por eventos: autorización del PDI, 1202 (y al terminar, "we're go on that alarm"), 1201, "contact light" y "The Eagle has landed". Son tramos continuos del canal de Asuntos Públicos de NASA (Johnson Space Center, Audio Control Room) publicados en el Apollo Lunar Surface Journal; dominio público. `src/recortar_audio.sh` los regenera desde las grabaciones originales, con sus tiempos.
 
 Simplificaciones: Luna esférica (sin terreno), radar de encuentro solo como robo de ciclos (no rastrea), sin cardán del motor (el empuje pasa por el centro de masa), inercias constantes y aproximadas, empuje constante por chorro y bloqueo de gimbal simplificado (la plataforma es arrastrada pasados 85° de MGA).
