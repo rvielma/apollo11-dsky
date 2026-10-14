@@ -19,7 +19,9 @@ static int32_t Disp[32];   /* [0..15] filas del canal 010, [16]=ch011, [17]=ch01
  *   [3..5]   pulsos de arrastre de CDU X, Y, Z (canales ficticios 0174-0176), con signo
  *   [8..15]  ciclos encendidos de cada chorro del canal 05, bits 1-8
  *   [16..23] ciclos encendidos de cada chorro del canal 06, bits 1-8
- *   [24..26] palanca RHC en cabeceo, guiñada y alabeo (-42..42 cuentas); la escribe el JavaScript */
+ *   [24..26] palanca RHC en cabeceo, guiñada y alabeo (-42..42 cuentas); la escribe el JavaScript
+ *   [27]     pulsos del acelerador del motor de descenso (contador THRUST 055), con signo
+ *   [28..31] cuentas del radar de aterrizaje: altura, VX, VY, VZ; las escribe el JavaScript */
 static int32_t Io[32];
 
 /* ---- API de E/S que el motor espera ---- */
@@ -61,7 +63,13 @@ void ChannelOutput(agc_t *s, int Channel, int Value) {
 int ChannelInput(agc_t *s) { (void)s; return 0; }
 void ChannelRoutine(agc_t *s) { (void)s; }
 void ShiftToDeda(agc_t *s, int Data) { (void)s; (void)Data; }
-void RequestRadarData(agc_t *s) { (void)s; }
+/* El AGC pidió un dato de radar (canal 013, bits 1-3 eligen cuál; el motor ya maneja la espera
+ * y la interrupción RADARUPT). Radar de aterrizaje: 4 = VX, 5 = VY, 6 = VZ, 7 = altura.
+ * El radar de encuentro (1, 2) no está simulado. */
+void RequestRadarData(agc_t *s) {
+  int sel = s->InputChannel[013] & 7;
+  s->Erasable[0][046] = sel >= 4 ? (Io[sel == 7 ? 28 : 25 + sel] & 077777) : 0;
+}
 
 /* ---- Exportaciones al JavaScript ---- */
 EXPORT(rom_ptr) uint8_t *rom_ptr(void) { return Rom; }
@@ -94,6 +102,14 @@ EXPORT(agc_run) int agc_run(int n) {
   for (int i = 0; i < n; i++) {
     agc_engine(&State);
     /* Los chorros RCS se encienden por milisegundos: se integra el tiempo encendido ciclo a ciclo. */
+    /* Acelerador: con el bit 4 del canal 014, el contador THRUST (055) se descarga al motor. */
+    if (State.InputChannel[014] & 010) {
+      int v = State.Erasable[0][055] & 077777;
+      if (v) {
+        Io[27] += (v & 040000) ? -(~v & 077777) : v;
+        State.Erasable[0][055] = 0;
+      }
+    }
     int j5 = State.InputChannel[05] & 0377, j6 = State.InputChannel[06] & 0377;
     if (j5 | j6)
       for (int b = 0; b < 8; b++) {
@@ -119,6 +135,15 @@ EXPORT(agc_set_erasable) void agc_set_erasable(int addr, int v) { State.Erasable
 EXPORT(agc_key) void agc_key(int code) {
   WriteIO(&State, 015, code & 037);
   State.InterruptRequests[5] = 1;
+}
+
+/* Interruptor ROD de P66 (canal 016: bit 6 = DESCENT+, bit 7 = DESCENT-), con KEYRUPT2. */
+EXPORT(agc_rod) void agc_rod(int dir) {
+  int v = State.InputChannel[016] & ~0140;
+  if (dir > 0) v |= 040;
+  if (dir < 0) v |= 0100;
+  State.InputChannel[016] = v;
+  if (dir) State.InterruptRequests[6] = 1;
 }
 
 /* PRO (canal 032, bit 14, activo en bajo). */

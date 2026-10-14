@@ -200,6 +200,25 @@ footer a { color: var(--ink-2); }
 .jets text { font-family: var(--f-label); font-size: 10px; letter-spacing: .08em; fill: var(--ink-3); }
 .jets .fwd { fill: var(--ink-2); }
 
+.descent { display: grid; gap: 12px; border: 1px solid var(--rule); border-radius: 8px; padding: 14px; background: var(--room-2); }
+.descent-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: stretch; }
+.telemetry.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 760px) { .descent-top { grid-template-columns: minmax(0, 1fr); } .contact { min-height: 34px; }
+  .telemetry.six { grid-template-columns: repeat(3, minmax(0, 1fr)); } .telemetry.six div:nth-child(4) { border-left: 0; } .telemetry.six div:nth-child(n+4) { border-top: 1px solid var(--rule); } }
+@media (max-width: 480px) {
+  .telemetry.six { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .telemetry.six div { border-left: 0; }
+  .telemetry.six div:nth-child(even) { border-left: 1px solid var(--rule); }
+  .telemetry.six div:nth-child(n+3) { border-top: 1px solid var(--rule); }
+}
+.contact { display: grid; place-items: center; min-width: 84px; padding: 6px 10px; border-radius: 4px; font-family: var(--f-label); font-weight: 700; font-size: 13px; letter-spacing: .1em; background: var(--lamp-off); color: #2b2d2f; }
+.contact.on { background: #6fb6ff; color: #04213d; box-shadow: 0 0 14px rgba(111,182,255,.7); }
+.crew { display: grid; gap: 8px; }
+.crew p { margin: 0; font-size: 14.5px; color: var(--ink); }
+.crew p b { color: var(--accent); font-weight: 600; }
+.crew .actions { align-items: center; }
+.auto { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--ink-2); margin-left: auto; }
+.landed { margin: 0; padding: 10px 12px; border-radius: 6px; background: rgba(141,255,143,.08); border: 1px solid rgba(141,255,143,.35); color: var(--el); font-size: 15px; }
 .seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg.three button { padding: 8px 10px; }
 .seg.three button b { font-size: 15px; }
@@ -266,8 +285,8 @@ footer a { color: var(--ink-2); }
       </div>
 
       <div class="panel">
-        <h2>Descenso del Apollo 11 <span class="wip">en construcción</span></h2>
-        <p class="kbd">Carga el computador del Eagle tal como estaba 15 minutos antes del inicio del descenso (memoria reconstruida por el proyecto NASSP) y deja que Luminary099 retome P63. Responde como la tripulación: <kbd>ENTR</kbd> para saltar la alineación fina, <kbd>ENTR</kbd> para dar por buena la actitud y mira la cuenta regresiva <code>V06 N62</code> (usa Acelerar ×10). A los 5 s pide <code>V99 N62</code>: autoriza con <kbd>P</kbd> (PRO) y el AGC enciende el motor y muestra <code>N63</code>: velocidad, velocidad vertical y altura, unos 48.000 pies. El motor de descenso aún no está simulado, así que segundos después el AGC detecta que no hay empuje y pide <code>V97</code>. Si no autorizas, da la alarma 1406.</p>
+        <h2>Descenso del Apollo 11</h2>
+        <p class="kbd">Carga el computador del Eagle tal como estaba 15 minutos antes del inicio del descenso motorizado (memoria reconstruida por el proyecto NASSP). Luminary099 retoma P63, enciende el motor, frena, pasa a P64 y aterriza; la nave, el motor de descenso y el radar de aterrizaje se simulan aquí. Con la tripulación automática solo miras; sin ella, haz tú cada paso. Usa Acelerar ×10.</p>
         <div class="actions"><button class="run" id="btnPdi" type="button">Cargar PDI −15 min</button></div>
       </div>
 
@@ -291,6 +310,29 @@ footer a { color: var(--ink-2); }
       <p>El AGC no sabe que es una simulación: lee la plataforma inercial por sus contadores CDU y gira el LM encendiendo chorros RCS, igual que en 1969. La física de la nave corre en tu navegador.</p>
     </div>
     <p class="craft-note" id="craftNote" hidden>La nave simulada es el Módulo Lunar. Con Comanche055 el computador corre sin sensores.</p>
+    <div class="descent" id="descent" hidden>
+      <div class="descent-top">
+        <dl class="telemetry six">
+          <div><dt>Altura</dt><dd id="dAlt">—</dd></div>
+          <div><dt>Vel. vertical</dt><dd id="dVz">—</dd></div>
+          <div><dt>Vel. horizontal</dt><dd id="dVh">—</dd></div>
+          <div><dt>Empuje DPS</dt><dd id="dThr">—</dd></div>
+          <div><dt>Combustible</dt><dd id="dFuel">—</dd></div>
+          <div><dt>Radar</dt><dd id="dLr">—</dd></div>
+        </dl>
+        <div class="contact" id="contactLamp">CONTACT</div>
+      </div>
+      <div class="crew">
+        <p id="crewStatus">—</p>
+        <div class="actions">
+          <button class="run" id="crewAct" type="button" disabled>—</button>
+          <button class="run" id="rodMinus" type="button" title="Interruptor ROD: baja 1 pie/s más rápido">ROD −1</button>
+          <button class="run" id="rodPlus" type="button" title="Interruptor ROD: baja 1 pie/s más lento">ROD +1</button>
+          <label class="auto"><input type="checkbox" id="crewAuto" checked> Tripulación automática</label>
+        </div>
+      </div>
+      <p class="landed" id="landedMsg" hidden></p>
+    </div>
     <div class="craft-grid">
       <figure class="fdai-box">
         <canvas id="fdai" width="300" height="300" role="img" aria-label="Indicador de actitud (FDAI)"></canvas>
@@ -337,7 +379,7 @@ footer a { color: var(--ink-2); }
   <footer>
     <p>Software de vuelo: MIT Instrumentation Laboratory (equipo de Margaret Hamilton), dominio público. Transcripción y emulador: <a href="https://github.com/virtualagc/virtualagc" target="_blank" rel="noopener">Virtual AGC</a> de Ron Burkey y colaboradores, licencia GPLv2. Los binarios ensamblados coinciden byte a byte con las cuerdas de vuelo.</p>
     <p>Código fuente de este sitio (puente en C, simulador y plantilla), GPLv2: <a href="https://github.com/rvielma/apollo11-dsky" target="_blank" rel="noopener">github.com/rvielma/apollo11-dsky</a>.</p>
-    <p>Con Luminary099 el AGC vuela un LM simulado: plataforma inercial, actitud y chorros RCS. Todavía sin traslación, radar ni motor de descenso; los programas que los necesitan pueden encender PROG.</p>
+    <p>Con Luminary099 el AGC vuela un LM simulado: plataforma inercial, actitud, chorros RCS, motor de descenso con su acelerador, acelerómetros y radar de aterrizaje sobre una Luna esférica. Sin radar de encuentro, terreno ni el cardán del motor. Estado de partida del descenso: proyecto <a href="https://github.com/orbiternassp/NASSP" target="_blank" rel="noopener">NASSP</a> (GPLv2).</p>
   </footer>
 </div>
 
@@ -496,6 +538,7 @@ const ESCENARIO = %%ESCENARIO%%;
     const lm = which === "LM";
     $("craft").classList.toggle("off", !lm);
     $("craftNote").hidden = lm;
+    $("descent").hidden = !scenario;
     for (const b of lmButtons) b.disabled = !lm;
     stick.p = stick.y = stick.r = 0; stick.keys.clear(); knob.style.transform = "";
     // Secuencia de arranque. En el LM la IMU está encendida y el AGC dedica sus primeros
@@ -506,9 +549,9 @@ const ESCENARIO = %%ESCENARIO%%;
       const mem = new Uint16Array(b64(ESCENARIO.memoria).buffer);
       for (let a = 0o10; a < 0o4000; a++) agc.agc_set_erasable(a, mem[a]);
       for (const ch in ESCENARIO.canales) agc.agc_set_chan(parseInt(ch, 8), ESCENARIO.canales[ch]);
-      agc.agc_set_chan(0o33, agc.agc_chan(0o33) & ~0o40);   // antena del radar en posición 1
-      sim.syncFromCdu();
+      sim.initFromMemory();   // nave donde el AGC cree que está; motor armado; antena en posición 1
       setMode("auto");
+      crewReset();
       drawFdai(true);
       return;
     }
@@ -605,7 +648,7 @@ const ESCENARIO = %%ESCENARIO%%;
         agc.agc_run(n); cycles += n; todo -= n; sliceAt += n;
         if (sliceAt >= SLICE) {
           sliceAt = 0;
-          if (rope === "LM") sim.step(SLICE / AGC_HZ);
+          if (rope === "LM") { sim.step(SLICE / AGC_HZ); if (inScenario) crewTick(SLICE / AGC_HZ); }
         }
       }
       const ch = disp[18];
@@ -752,6 +795,7 @@ const ESCENARIO = %%ESCENARIO%%;
   let lastReadout = 0;
   function renderCraft() {
     drawFdai(false);
+    if (inScenario) renderDescent();
     const now = performance.now();
     for (const [name, f] of sim.jets) {
       if (f > 0) jetSeen[name] = now;
@@ -762,6 +806,103 @@ const ESCENARIO = %%ESCENARIO%%;
       const g = sim.gimbals, w = sim.rates;
       $("gO").textContent = fmtDeg(g[0]); $("gI").textContent = fmtDeg(g[1]); $("gM").textContent = fmtDeg(g[2]);
       $("wX").textContent = fmtRate(w[0]); $("wY").textContent = fmtRate(w[1]); $("wZ").textContent = fmtRate(w[2]);
+    }
+  }
+
+  // ── Descenso: asistente de tripulación y telemetría ──
+  // Cada paso es lo que hacía la tripulación del Apollo 11 ante cada pedido del AGC. Con la
+  // tripulación automática se hace solo; si no, el botón lo hace cuando tú decides.
+  const DPS_FULL_KG = 8355;
+  let crew;
+  function crewReset() {
+    crew = { ignitedAt: null, yaw: null, yawed: false, v57: false, pro64: false, busyUntil: 0, landed: false };
+    $("landedMsg").hidden = true;
+  }
+  const regDigits = (r) => {
+    const d = disp, rows = [[8, 0], [7, 1], [7, 0], [6, 1], [6, 0]];
+    return r === 1 ? rows.map(([n, hi]) => dg(d[n], hi) ?? " ").join("") : "";
+  };
+  function crewStep() {
+    const s = vnState(), prog = (dg(disp[11], 1) ?? " ") + (dg(disp[11], 0) ?? " ");
+    if (sim.landed) return { text: "<b>Eagle ha aterrizado.</b>" };
+    if (crew.yaw) return { text: "Girando el LM 180° sobre su eje de empuje para que el radar vea el suelo…" };
+    if (prog === "63" && s.verb === "50" && s.noun === "25" && s.flash && regDigits(1) === "00014")
+      return { text: "P63 ofrece una alineación fina con estrellas. La tripulación la saltaba.", label: "Saltar (ENTR)", keys: "E" };
+    if (prog === "63" && s.verb === "50" && s.noun === "18" && s.flash && crew.ignitedAt === null)
+      return { text: "El AGC pide la actitud de encendido; el LM ya está en ella.", label: "Actitud lista (ENTR)", keys: "E" };
+    if (s.verb === "99" && s.flash)
+      return { text: "<b>V99 N62:</b> el AGC pide autorización para encender el motor de descenso.", label: "Autorizar encendido (PRO)", keys: "P" };
+    if (prog === "63" && crew.ignitedAt !== null && !crew.yawed && cycles - crew.ignitedAt > 240 * AGC_HZ)
+      return { text: "Frenando con las ventanas hacia la Luna: el radar apunta al cielo. Armstrong giró el LM a ventanas arriba.", label: "Girar a ventanas arriba", action: startYaw };
+    if (prog === "63" && sim.radar.good && !crew.v57)
+      return { text: "El radar de aterrizaje ya mide altura y velocidad. Falta permitir que el AGC use sus datos.", label: "Aceptar el radar (V57)", keys: "V57E", after: () => { crew.v57 = true; } };
+    if (prog === "64" && s.verb === "06" && s.noun === "64" && s.flash)
+      return { text: "<b>P64:</b> el LM se endereza y la tripulación ve el sitio. El AGC pide confirmación.", label: "Confirmar (PRO)", keys: "P", after: () => { crew.pro64 = true; } };
+    if (crew.ignitedAt === null) return { text: s.noun === "62" ? "Cuenta regresiva a la ignición (R2: minutos y segundos)." : "Esperando al AGC…" };
+    if (prog === "63") return { text: "<b>P63, frenado:</b> motor a fondo; el AGC baja el empuje cuando lo pide la guía." };
+    if (prog === "64") return { text: "<b>P64, aproximación:</b> el AGC lleva el LM hacia el sitio. Puedes tomar el control con ROD (P66)." };
+    if (prog === "65") return { text: "<b>P65:</b> aterrizaje vertical automático, nunca usado en una misión real." };
+    if (prog === "66") return { text: "<b>P66:</b> control manual de la velocidad de descenso con ROD; la palanca mueve el LM." };
+    return { text: "Descenso en curso." };
+  }
+  function doCrew(st) {
+    if (st.action) st.action();
+    if (st.keys) { press("PRO_UP"); schedule(seq(st.keys), 0.05); }
+    if (st.after) st.after();
+    crew.busyUntil = cycles + 3 * AGC_HZ;
+  }
+  function startYaw() {
+    setMode("hold");
+    sim.setStick(0, 42, 0);
+    crew.yaw = { ang: 0, settle: 0 };
+  }
+  function crewTick(dt) {
+    if (!crew) return;
+    if (sim.engine.on && crew.ignitedAt === null) crew.ignitedAt = cycles;
+    if (crew.yaw) {                                  // giro de 180° en guiñada, luego frenar y AUTO
+      if (!crew.yaw.settle) {
+        crew.yaw.ang += Math.abs(sim.rates[0]) * dt;
+        if (crew.yaw.ang >= Math.PI * 0.93) { sim.setStick(0, 0, 0); crew.yaw.settle = cycles + 4 * AGC_HZ; }
+      } else if (cycles >= crew.yaw.settle) { setMode("auto"); crew.yaw = null; crew.yawed = true; }
+      return;
+    }
+    if ($("crewAuto").checked && !queue.length && cycles >= crew.busyUntil) {
+      const st = crewStep();
+      if (st.label) doCrew(st);
+    }
+  }
+  $("crewAct").addEventListener("click", () => { const st = crewStep(); if (st.label) doCrew(st); });
+  const rod = (dir) => { if (!agc) return; agc.agc_rod(dir); setTimeout(() => agc.agc_rod(0), 150); };
+  $("rodMinus").addEventListener("click", () => { if (mode !== "hold") setMode("hold"); rod(-1); });
+  $("rodPlus").addEventListener("click", () => { if (mode !== "hold") setMode("hold"); rod(1); });
+
+  const durTxt = (sec) => `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s`;
+  const fmtNum = (x, dec = 0) => x.toLocaleString("es-CL", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  let lastDescent = 0;
+  function renderDescent() {
+    const now = performance.now();
+    $("contactLamp").classList.toggle("on", sim.contact || sim.landed);
+    if (now - lastDescent < 150) return;
+    lastDescent = now;
+    const s = sim.surface, e = sim.engine, lr = sim.radar;
+    if (!s) return;
+    $("dAlt").textContent = fmtNum(Math.max(0, s.h) / 0.3048) + " ft";
+    $("dVz").textContent = fmtNum(s.vVert / 0.3048, 1) + " ft/s";
+    $("dVh").textContent = fmtNum(s.vHoriz / 0.3048, 1) + " ft/s";
+    $("dThr").textContent = e.on ? fmtNum(e.fraction * 100) + " %" : "apagado";
+    $("dFuel").textContent = fmtNum((sim.fuel / DPS_FULL_KG) * 100, 1) + " %";
+    $("dLr").textContent = sim.landed ? "—" : lr.good ? (lr.lowScale ? "datos · escala baja" : "datos") : "sin datos";
+    const st = crewStep();
+    $("crewStatus").innerHTML = st.text;
+    const btn = $("crewAct");
+    btn.textContent = st.label || "Sin acción pendiente";
+    btn.disabled = !st.label || $("crewAuto").checked;
+    if (sim.landed && !crew.landed) {
+      crew.landed = true;
+      const td = sim.touchdown;
+      const m = $("landedMsg");
+      m.hidden = false;
+      m.textContent = `Eagle ha aterrizado. Contacto a ${fmtNum(-td.vVert / 0.3048, 1)} ft/s vertical y ${fmtNum(td.vHoriz / 0.3048, 1)} ft/s horizontal, con ${fmtNum((sim.fuel / DPS_FULL_KG) * 100, 1)} % de combustible, ${durTxt((cycles - crew.ignitedAt) / AGC_HZ)} después de encender el motor (el Apollo 11 tardó 12 min 36 s).`;
     }
   }
 

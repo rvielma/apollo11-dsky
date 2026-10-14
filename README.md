@@ -4,6 +4,8 @@ El software de vuelo original del Apollo 11 corriendo en el navegador. Luminary0
 
 Con Luminary099 el AGC vuela un LM simulado: plataforma inercial (IMU), actitud y los 16 chorros RCS. El computador lee los gimbals por sus contadores CDU, su autopiloto (DAP) mantiene la actitud, ejecuta maniobras automáticas (`V49`) y obedece la palanca de mando en ATT HOLD. La página muestra la bola de actitud (FDAI) y los chorros encendidos.
 
+**Descenso del Apollo 11.** Un botón carga el computador del Eagle 15 minutos antes del descenso motorizado (memoria borrable del escenario de NASSP) y el software de vuelo hace el resto: P63 (frenado), P64 (aproximación) y P65 o P66 hasta posarse, con el motor de descenso, los acelerómetros y el radar de aterrizaje simulados. Un asistente hace lo que hacía la tripulación (ENTR, PRO para encender, giro a ventanas arriba, `V57` para aceptar el radar, PRO en P64) o te deja hacerlo a ti. En la prueba de referencia se posa a ~3 ft/s con ~7 % de combustible, sin alarmas.
+
 ## Qué hay aquí
 
 ```
@@ -11,7 +13,9 @@ index.html              El sitio completo (≈340 KB). Motor wasm, cuerdas y sim
 src/agc_web.c           Puente en C entre el motor yaAGC y el navegador.
 src/lm_sim.js           La nave: IMU, dinámica de actitud y chorros RCS del LM.
 src/dsky_template.html  Plantilla del panel (HTML/CSS/JS) con marcadores para wasm, ROMs y simulador.
-src/prueba_nave.js      Prueba en Node: el AGC lee la IMU, frena rotaciones, maniobra y obedece la palanca.
+src/prueba_nave.js      Prueba en Node: IMU, autopiloto, palanca y el descenso completo hasta posarse.
+src/escenario_pdi.json  Memoria del computador del LM 15 min antes del PDI (de NASSP).
+src/extraer_escenario.py Regenera escenario_pdi.json desde el .scn de NASSP.
 src/build.sh            Clona Virtual AGC, ensambla las cuerdas, compila a wasm y regenera index.html.
 src/VIRTUALAGC_COMMIT   Commit exacto de Virtual AGC usado.
 ```
@@ -69,7 +73,7 @@ Clonar Virtual AGC descarga el repositorio completo, que es grande. Cuenta con v
 node src/prueba_nave.js
 ```
 
-Carga el wasm y Luminary099 desde `index.html`, corre unos minutos de tiempo AGC en un segundo y comprueba el comportamiento de vuelo. Correrla después de tocar `lm_sim.js`, `agc_web.c` o la secuencia de arranque.
+Carga el wasm, Luminary099 y el escenario desde `index.html`, corre ~40 minutos de tiempo AGC en unos 15 segundos y comprueba el comportamiento de vuelo, incluido el descenso completo hasta posarse. Correrla después de tocar `lm_sim.js`, `agc_web.c` o la secuencia de arranque.
 
 ## Licencias
 
@@ -101,4 +105,13 @@ El puente implementa la API de canales que espera el motor (`ChannelOutput`, `Ch
 - Al arrancar se teclea `V48` como hacía la tripulación: N46 = 20102 y N47 = 33.300 lb. Sin masa, el autopiloto no tiene inercias y las maniobras se pasan de largo. El trim del motor de descenso (N48) se salta con `V34`, porque no hay motor simulado.
 - Mientras pone en marcha la IMU, el AGC rechaza `V37` durante unos segundos (alarma 1520). Por eso el arranque carga primero el autopiloto y después pide P00.
 
-Simplificaciones: sin traslación (los PIPA quedan en cero), inercias constantes y aproximadas, empuje constante por chorro y bloqueo de gimbal simplificado (la plataforma es arrastrada pasados 85° de MGA).
+### Descenso (escenario PDI −15 min)
+
+- Estado inicial: la memoria borrable y los canales 030-033 del escenario de NASSP. El AGC arranca en 04000 como tras un corte de energía y su protección de reinicio retoma P63. La nave toma RN/VN (propagados desde PIPTIME), REFSMMAT, la rotación lunar WM, el radio del sitio /LAND/ y la masa MASS de esa misma memoria; el marco inercial de la simulación es el de la plataforma.
+- Motor de descenso: canal 011 bit 13 enciende y bit 14 apaga; requiere el motor armado (canal 030 bit 3). Acelerador: el contador THRUST (055) se descarga cuando el canal 014 bit 4 está activo; cada pulso suma 12,53 N a un integrador (como el DECA), sobre el 10 % del acelerador manual, con tope en FTP (43.203 N), rampa de 40 kN/s y retardo de 0,2 s. Velocidad de escape 2955,9 m/s.
+- PIPA: 1 cm/s por pulso, en ejes de la plataforma.
+- Radar de aterrizaje: el motor yaAGC maneja la espera y la interrupción RADARUPT; el puente responde en RNRAD (046) según el canal 013. Altura oblicua a lo largo del haz (1,079 o 5,395 ft por cuenta según la escala, canal 033 bit 9), velocidades VX/VY/VZ relativas al terreno en ejes de la antena con sesgo 12288. Antena en posición 1 (24°) o 2 (vertical, la manda el canal 012 bit 13 y allí se queda). Datos buenos por debajo de 50.000 ft si el haz ve el suelo: con ventanas hacia la Luna no lo ve, por eso el giro a ventanas arriba.
+- El canal 033 tiene que mostrar la antena en posición 1 antes del reinicio: el AGC la lee ahí y, si no, espera la posición 2 y da la alarma 522 con cada dato.
+- Contacto: a 1,7 m se enciende CONTACT; al llegar al suelo el motor se apaga y se desarma.
+
+Simplificaciones: Luna esférica (sin terreno), sin radar de encuentro (no hay alarmas 1201/1202), sin cardán del motor (el empuje pasa por el centro de masa), inercias constantes y aproximadas, empuje constante por chorro y bloqueo de gimbal simplificado (la plataforma es arrastrada pasados 85° de MGA).

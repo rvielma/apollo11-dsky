@@ -44,6 +44,48 @@ async function lm() {
   return { agc, sim, run, keys, dsky };
 }
 
+const ESCENARIO = JSON.parse(html.slice(html.indexOf("const ESCENARIO = ") + 18, html.indexOf(";\n", html.indexOf("const ESCENARIO = "))));
+
+async function descent() {
+  const wasi = new Proxy({}, { get: () => () => 8 });
+  const { instance } = await WebAssembly.instantiate(WASM, { wasi_snapshot_preview1: wasi });
+  const agc = instance.exports;
+  if (agc._initialize) agc._initialize();
+  new Uint8Array(agc.memory.buffer, agc.rom_ptr(), ROPE.length).set(ROPE);
+  agc.agc_boot(ROPE.length);
+  const buf = Buffer.from(ESCENARIO.memoria, "base64");
+  for (let a = 0o10; a < 0o4000; a++) agc.agc_set_erasable(a, buf.readUInt16LE(2 * a));
+  for (const ch in ESCENARIO.canales) agc.agc_set_chan(parseInt(ch, 8), ESCENARIO.canales[ch]);
+  const sim = LMSim(agc);
+  sim.reset();
+  sim.initFromMemory();
+  sim.setMode("auto");
+  let t = 0;
+  const run = (sec) => { for (let c = 0; c < sec * AGC_HZ; c += SLICE) { agc.agc_run(SLICE); sim.step(SLICE / AGC_HZ); t += SLICE / AGC_HZ; } };
+  const keys = (s) => { for (const c of s) { if (c === "P") { agc.agc_pro(1); run(0.5); agc.agc_pro(0); run(0.6); } else { agc.agc_key(KEY[c]); run(0.25); } } };
+  const d = () => new Int32Array(agc.memory.buffer, agc.disp_ptr(), 32);
+  const two = (v) => (DIG[(v >> 5) & 31] ?? "?") + (DIG[v & 31] ?? "?");
+  const vn = () => ({ prog: two(d()[11]), verb: two(d()[10]), noun: two(d()[9]), flash: (d()[16] & 0o40) !== 0 });
+  const dsky = () => { const x = d(), g = (v, hi) => DIG[hi ? (v >> 5) & 31 : v & 31] ?? "?"; return { r1: g(x[8], 0) + g(x[7], 1) + g(x[7], 0) + g(x[6], 1) + g(x[6], 0) }; };
+  run(2); keys("E"); run(3); keys("E"); run(2);
+  while (vn().verb !== "99" && t < 1200) run(1);
+  keys("P");
+  const t0 = t;
+  let yawed = false, v57 = false;
+  while (!sim.landed && t - t0 < 1000) {
+    run(1);
+    const s = vn();
+    if (!yawed && t - t0 > 240) {
+      yawed = true; sim.setMode("hold"); sim.setStick(0, 42, 0);
+      let ang = 0; while (ang < Math.PI * 0.93) { run(0.1); ang += sim.rates[0] * 0.1; }
+      sim.setStick(0, 0, 0); run(4); sim.setMode("auto");
+    }
+    if (!v57 && sim.radar.good) { keys("V57E"); v57 = true; }
+    if (s.prog === "64" && s.verb === "06" && s.noun === "64" && s.flash) keys("P");
+  }
+  return { sim, keys, dsky };
+}
+
 let fallas = 0;
 function check(nombre, ok, detalle) {
   console.log(`${ok ? "ok  " : "FALLA"} ${nombre}${detalle ? " — " + detalle : ""}`);
@@ -101,6 +143,19 @@ const deg = (v) => v.map((x) => (x / DEG).toFixed(2)).join(" / ");
     const after = Math.abs(h.sim.rates[1]) / DEG;
     check("la palanca gira el LM en cabeceo", rate > 3, `${rate.toFixed(2)} °/s`);
     check("al soltarla el AGC lo detiene", after < 0.1, `queda ${after.toFixed(3)} °/s`);
+  }
+  {
+    // Descenso del Apollo 11 desde PDI −15 min, con la tripulación haciendo lo de la misión:
+    // ENTR, ENTR, PRO en V99, giro a ventanas arriba, V57 con datos del radar, PRO en P64.
+    const h = await descent();
+    check("descenso: termina posado", h.sim.landed, h.sim.landed ? "" : `h = ${h.sim.surface.h.toFixed(0)} m`);
+    if (h.sim.landed) {
+      const td = h.sim.touchdown;
+      check("descenso: contacto suave", Math.abs(td.vVert) < 1.5 && td.vHoriz < 1.5, `vertical ${td.vVert.toFixed(2)} m/s, horizontal ${td.vHoriz.toFixed(2)} m/s`);
+      check("descenso: queda combustible", h.sim.fuel > 100, `${h.sim.fuel.toFixed(0)} kg`);
+    }
+    h.keys("V05N09E");
+    check("descenso: sin alarmas", h.dsky().r1 === "00000", `R1 de V05 N09 = ${h.dsky().r1}`);
   }
   console.log(fallas ? `\n${fallas} prueba(s) fallaron` : "\ntodo bien");
   process.exit(fallas ? 1 : 0);
