@@ -84,7 +84,7 @@ async function descent(rrNoise = 0) {
     if (!v57 && sim.radar.good) { keys("V57E"); v57 = true; }
     if (s.prog === "64" && s.verb === "06" && s.noun === "64" && s.flash) keys("P");
   }
-  return { sim, keys, dsky };
+  return { sim, keys, dsky, run };
 }
 
 let fallas = 0;
@@ -165,6 +165,7 @@ const deg = (v) => v.map((x) => (x / DEG).toFixed(2)).join(" / ");
     const td = h.sim.touchdown;
     check("1202: aun así se posa suave", h.sim.landed && !td.crash, td ? `vertical ${td.vVert.toFixed(2)} m/s` : "no se posó");
     h.keys("V05N09E");
+    h.run(3);                          // con el AGC saturado el display tarda en refrescarse
     const codes = [h.dsky().r1];
     check("1202: el AGC registró 1201 o 1202", codes.some((c) => c === "01201" || c === "01202"), `R1 de V05 N09 = ${codes[0]}`);
   }

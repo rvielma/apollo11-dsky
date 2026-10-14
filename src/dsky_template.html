@@ -1089,8 +1089,10 @@ void main() {
       const R = sim.surfaceRadius, pos = sim.position, rr = Math.hypot(...pos);
       const up = pos.map((x) => x / rr), b = basis(up), cam = camera();
       const L = (v) => [V.dot(v, b.e), V.dot(v, b.n), V.dot(v, b.u)];
-      const camE = R * Math.asin(Math.max(-1, Math.min(1, V.dot(up, ref.b.e))));
-      const camN = R * Math.asin(Math.max(-1, Math.min(1, V.dot(up, ref.b.n))));
+      let camE = R * Math.asin(Math.max(-1, Math.min(1, V.dot(up, ref.b.e))));
+      let camN = R * Math.asin(Math.max(-1, Math.min(1, V.dot(up, ref.b.n))));
+      // Posado, el LM gira con la Luna en el marco inercial: la vista se fija donde se posó
+      if (sim.landed) { if (!ref.landedAt) ref.landedAt = [camE, camN]; [camE, camN] = ref.landedAt; }
       if (gl && init()) {
         gl.viewport(0, 0, W, H);
         gl.uniform2f(loc.uRes, W, H);
@@ -1255,6 +1257,7 @@ void main() {
     btn.disabled = !st.label || $("crewAuto").checked;
     if (sim.landed && !crew.landed) {
       crew.landed = true;
+      setMode("off");
       const td = sim.touchdown;
       const m = $("landedMsg");
       m.hidden = false;

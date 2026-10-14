@@ -247,8 +247,11 @@ function LMSim(agc) {
     // Euler: I·dω/dt = τ − ω × (I·ω)
     const Iw = w.map((x, k) => x * INERTIA[k]);
     const gyro = [w[1] * Iw[2] - w[2] * Iw[1], w[2] * Iw[0] - w[0] * Iw[2], w[0] * Iw[1] - w[1] * Iw[0]];
-    for (let k = 0; k < 3; k++) w[k] += ((tau[k] - gyro[k]) / INERTIA[k]) * dt;
-    B = ortho(mul(B, rotv(w.map((x) => x * dt))));
+    if (landed) w = [0, 0, 0];         // posado: las patas lo fijan al suelo, los chorros no lo giran
+    else {
+      for (let k = 0; k < 3; k++) w[k] += ((tau[k] - gyro[k]) / INERTIA[k]) * dt;
+      B = ortho(mul(B, rotv(w.map((x) => x * dt))));
+    }
 
     // Torque fino de giróscopos: gira la plataforma sobre sus propios ejes.
     if (d[0] || d[1] || d[2]) {
